@@ -1,0 +1,54 @@
+@import "tailwindcss";
+
+/* Moti AI brand tokens
+   Warm, optimistic, human-centred palette for an AI learning company. */
+:root {
+  --background: #fff7f3;
+  --foreground: #17203a; /* dark navy typography */
+
+  --moti-pink: #fbcfe1;
+  --moti-peach: #ffd9b7;
+  --moti-yellow: #fde9a9;
+  --moti-navy: #17203a;
+  --moti-navy-soft: #4a5578;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-moti-pink: var(--moti-pink);
+  --color-moti-peach: var(--moti-peach);
+  --color-moti-yellow: var(--moti-yellow);
+  --color-moti-navy: var(--moti-navy);
+  --color-moti-navy-soft: var(--moti-navy-soft);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+}
+
+/* Subtle entrance animation used on the landing screen. */
+@keyframes moti-rise {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.moti-rise {
+  animation: moti-rise 0.6s ease-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .moti-rise {
+    animation: none;
+  }
+}
