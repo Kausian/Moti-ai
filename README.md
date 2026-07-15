@@ -39,10 +39,31 @@ remember through spaced review — with a friendly animated 3D assistant alongsi
 
 ## Development status
 
-**Phase 1 — Product foundation (current).** This repository currently contains
-the project rules, documentation, and a minimal branded scaffold. The dashboard,
-chat, grounded AI, knowledge upload, learning flow, and 3D assistant are planned
-for later phases. See [`docs/development-plan.md`](docs/development-plan.md).
+**Phase 2 — Static learning workspace & design system (current).** The app now
+renders the full responsive learning workspace as a polished, static interface
+driven entirely by typed mock data.
+
+What works in this phase:
+
+- Responsive three-panel workspace — assistant, learning conversation, and
+  Mastery Journey — that collapses cleanly to tablet and mobile layouts.
+- A branded design system (warm gradient palette, navy typography, reusable
+  mastery-status badges, inline SVG icons, subtle motion).
+- An open/close **Knowledge & settings** drawer with tabs, form fields, Escape
+  and backdrop close, focus handling, and body-scroll lock.
+- Mobile panel switching, a message composer with live character count and a
+  disabled send state, and a static Moti Mirror teach-back example.
+
+Intentionally **not** connected yet (visually honest placeholders only):
+
+- No AI, no Gemini calls, no retrieval — all conversation content is mock data.
+- No real file upload or PDF/TXT/Markdown parsing; the drop zone is illustrative.
+- No persistence (no localStorage/database); edits in the settings drawer are
+  in-memory only.
+- The 3D assistant is a styled placeholder; React Three Fiber / Three.js arrive
+  in a later phase.
+
+See [`docs/development-plan.md`](docs/development-plan.md) for the full phase plan.
 
 ## Getting started
 

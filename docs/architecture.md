@@ -127,23 +127,35 @@ are marked with `"use client"` deliberately.
 ## Planned module structure
 
 ```
+# Present structure (through Phase 2 — static workspace)
 src/
   app/
     layout.tsx            # root layout, fonts, metadata
-    page.tsx              # landing (Phase 1)
-    globals.css           # Tailwind v4 + brand tokens
-    (learn)/              # learning experience routes (later phases)
-    api/
-      chat/route.ts       # grounded conversation handler (later phase)
-      evaluate/route.ts   # teach-back / misconception handler (later phase)
-  components/             # UI components (cards, chat, Moti Mirror, journey)
-  features/               # feature logic: ingestion, mastery, memory-echo
+    page.tsx              # renders the learning workspace shell
+    globals.css           # Tailwind v4 theme + brand tokens + motion
+  components/
+    layout/               # AppHeader, LearningWorkspace shell, MobilePanelTabs
+    assistant/            # AssistantPanel, MotiOrb (3D placeholder)
+    chat/                 # ConversationPanel, ChatMessage, MotiMirrorCard,
+                          #   LearningActions, MessageComposer, SourceChip
+    learning/             # JourneyPanel, MemoryEcho
+    settings/             # SettingsDrawer
+    ui/                   # icons (inline SVG), MasteryBadge
+  data/
+    demo-data.ts          # typed mock data
+  lib/
+    types.ts              # shared TypeScript types
+
+# Planned additions (created in the phase that first needs them)
+src/
+  app/api/
+    chat/route.ts         # grounded conversation handler (Phase 4)
+    evaluate/route.ts     # teach-back / misconception handler (Phase 5)
   lib/
     ai/                   # server-only Gemini client + prompt assembly
     grounding/            # source-context assembly + safety rules
-    storage/              # typed localStorage persistence module
-    types/                # shared TypeScript types
-  three/                  # 3D assistant (React Three Fiber) — later phase
+    storage/              # typed localStorage persistence module (Phase 3)
+  three/                  # 3D assistant (React Three Fiber) — Phase 7
 ```
 
 _This layout is a target. Directories are created in the phase that first needs

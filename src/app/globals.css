@@ -3,7 +3,7 @@
 /* Moti AI brand tokens
    Warm, optimistic, human-centred palette for an AI learning company. */
 :root {
-  --background: #fff7f3;
+  --background: #fdf6f1;
   --foreground: #17203a; /* dark navy typography */
 
   --moti-pink: #fbcfe1;
@@ -11,6 +11,17 @@
   --moti-yellow: #fde9a9;
   --moti-navy: #17203a;
   --moti-navy-soft: #4a5578;
+  --moti-surface: #ffffff;
+  --moti-line: #efe1d6; /* warm hairline */
+
+  /* Semantic mastery statuses — muted so they sit within the warm palette.
+     Always paired with an icon and text label, never colour alone. */
+  --moti-exploring: #9a6b12;
+  --moti-exploring-bg: #fdefcf;
+  --moti-developing: #454fb0;
+  --moti-developing-bg: #e8eafc;
+  --moti-understood: #2f7d55;
+  --moti-understood-bg: #dcf2e5;
 }
 
 @theme inline {
@@ -21,6 +32,14 @@
   --color-moti-yellow: var(--moti-yellow);
   --color-moti-navy: var(--moti-navy);
   --color-moti-navy-soft: var(--moti-navy-soft);
+  --color-moti-surface: var(--moti-surface);
+  --color-moti-line: var(--moti-line);
+  --color-moti-exploring: var(--moti-exploring);
+  --color-moti-exploring-bg: var(--moti-exploring-bg);
+  --color-moti-developing: var(--moti-developing);
+  --color-moti-developing-bg: var(--moti-developing-bg);
+  --color-moti-understood: var(--moti-understood);
+  --color-moti-understood-bg: var(--moti-understood-bg);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
@@ -31,7 +50,50 @@ body {
   font-family: var(--font-sans), Arial, Helvetica, sans-serif;
 }
 
-/* Subtle entrance animation used on the landing screen. */
+/* Keyboard focus is always clearly visible and brand-toned. */
+:focus-visible {
+  outline: 2px solid var(--moti-navy);
+  outline-offset: 2px;
+  border-radius: 8px;
+}
+
+/* Responsive learning-workspace grid.
+   Mobile: single column; one panel is shown at a time via UI state.
+   Tablet: assistant + conversation side by side, journey spans below.
+   Desktop: three columns. */
+.workspace-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+@media (min-width: 768px) {
+  .workspace-grid {
+    display: grid;
+    grid-template-columns: minmax(220px, 260px) minmax(0, 1fr);
+    grid-template-areas: "assistant conversation" "journey journey";
+    height: 100%;
+  }
+}
+@media (min-width: 1024px) {
+  .workspace-grid {
+    grid-template-columns: minmax(260px, 300px) minmax(0, 1fr) minmax(300px, 340px);
+    grid-template-areas: "assistant conversation journey";
+  }
+}
+.area-assistant {
+  grid-area: assistant;
+  min-width: 0;
+}
+.area-conversation {
+  grid-area: conversation;
+  min-width: 0;
+}
+.area-journey {
+  grid-area: journey;
+  min-width: 0;
+}
+
+/* Subtle motion — restrained, never continuous background movement. */
 @keyframes moti-rise {
   from {
     opacity: 0;
@@ -39,16 +101,57 @@ body {
   }
   to {
     opacity: 1;
+    transform: none;
+  }
+}
+@keyframes moti-float {
+  0%,
+  100% {
     transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-7px);
+  }
+}
+@keyframes moti-halo {
+  0%,
+  100% {
+    opacity: 0.5;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.85;
+    transform: scale(1.05);
+  }
+}
+@keyframes moti-status-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.4;
   }
 }
 
 .moti-rise {
-  animation: moti-rise 0.6s ease-out both;
+  animation: moti-rise 0.5s ease-out both;
+}
+.moti-float {
+  animation: moti-float 6s ease-in-out infinite;
+}
+.moti-halo {
+  animation: moti-halo 6s ease-in-out infinite;
+}
+.status-dot-pulse {
+  animation: moti-status-pulse 2.2s ease-in-out infinite;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .moti-rise {
+  .moti-rise,
+  .moti-float,
+  .moti-halo,
+  .status-dot-pulse {
     animation: none;
   }
 }

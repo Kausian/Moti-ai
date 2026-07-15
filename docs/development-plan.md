@@ -13,7 +13,7 @@ and ends green (lint + production build pass). Feature dependencies are introduc
 
 ---
 
-## Phase 1 — Product foundation _(this phase)_
+## Phase 1 — Product foundation _(complete)_
 
 **Goal:** establish the project, rules, documentation, and a minimal branded
 scaffold.
@@ -40,7 +40,41 @@ clean; no future-phase features present.
 
 ---
 
-## Phase 2 — Knowledge ingestion & configuration
+## Phase 2 — Static learning workspace & design system _(complete)_
+
+**Goal:** build the production-quality static interface, design system, and
+responsive product shell — visual and interaction only, driven by typed mock
+data (no AI, upload, retrieval, persistence, or 3D).
+
+**Deliverables**
+- Responsive three-panel workspace (assistant, conversation, Mastery Journey)
+  with tablet/mobile collapse and a mobile panel switcher.
+- Brand design system in `globals.css` (palette, navy typography, subtle motion)
+  plus reusable UI (mastery badges, inline SVG icons).
+- Static conversation with the reusable Moti Mirror teach-back card, a
+  learning-action toolbar, and a composer (local state, char count, disabled
+  send).
+- Mastery Journey and Memory Echo panels from typed mock data.
+- Knowledge & settings drawer with open/close, tabs, Escape/backdrop close,
+  focus handling, and body-scroll lock.
+
+**New dependencies:** none.
+
+**Dependencies:** Phase 1 foundation.
+
+**Risks:** layout/overflow across breakpoints; scope creep into real features;
+placeholders that could read as finished functionality.
+
+**Validation:** lint + build clean; settings drawer opens and closes; no
+horizontal overflow at desktop/tablet/mobile; no console errors; no forbidden
+dependencies added.
+
+**Definition of done:** the full workspace renders responsively as an honest
+static prototype; every non-working feature is clearly labelled.
+
+---
+
+## Phase 3 — Knowledge ingestion & configuration
 
 **Goal:** let a user configure assistant instructions and add learning material.
 
@@ -52,7 +86,7 @@ clean; no future-phase features present.
 
 **New dependencies:** PDF.js (introduced here).
 
-**Dependencies:** Phase 1 foundation.
+**Dependencies:** Phase 2 (workspace shell to wire ingestion into).
 
 **Risks:** PDF extraction edge cases; large files in the browser; localStorage
 size limits.
@@ -65,7 +99,7 @@ sources are stored via the single persistence module.
 
 ---
 
-## Phase 3 — Source-grounded conversation
+## Phase 4 — Source-grounded conversation
 
 **Goal:** grounded Q&A through a server Route Handler.
 
@@ -79,7 +113,7 @@ sources are stored via the single persistence module.
 
 **New dependencies:** Gemini access (server-side); no client SDK.
 
-**Dependencies:** Phase 2 (sources exist to ground against).
+**Dependencies:** Phase 3 (sources exist to ground against).
 
 **Risks:** hallucination/off-source drift; key leakage; free-tier rate limits.
 
@@ -91,7 +125,7 @@ material, and Moti refuses to answer beyond the sources.
 
 ---
 
-## Phase 4 — Active-learning loop (Think → Explain → Correct)
+## Phase 5 — Active-learning loop (Think → Explain → Correct)
 
 **Goal:** the teach-back and correction pedagogy.
 
@@ -100,7 +134,7 @@ material, and Moti refuses to answer beyond the sources.
 - `/api/evaluate` handler for misconception detection + correction against source.
 - Adaptive micro-challenges sized to the learner's level.
 
-**Dependencies:** Phase 3 (grounded model access).
+**Dependencies:** Phase 4 (grounded model access).
 
 **Risks:** misconception detection is best-effort; challenge difficulty
 calibration; keeping feedback encouraging, not discouraging.
@@ -113,7 +147,7 @@ end-to-end on the demo course.
 
 ---
 
-## Phase 5 — Mastery Journey & Memory Echo (Remember)
+## Phase 6 — Mastery Journey & Memory Echo (Remember)
 
 **Goal:** track understanding and schedule review.
 
@@ -122,7 +156,7 @@ end-to-end on the demo course.
 - Mastery Journey view.
 - Memory Echo review queue with spaced scheduling (prototype-level).
 
-**Dependencies:** Phases 2 & 4 (persistence + concepts to track).
+**Dependencies:** Phases 3 & 5 (persistence + concepts to track).
 
 **Risks:** scheduling logic complexity; keeping it simple and demonstrable.
 
@@ -134,7 +168,7 @@ persists.
 
 ---
 
-## Phase 6 — Animated 3D assistant (Moti)
+## Phase 7 — Animated 3D assistant (Moti)
 
 **Goal:** the signature 3D assistant.
 
@@ -146,7 +180,7 @@ persists.
 
 **New dependencies:** React Three Fiber, Three.js (introduced here).
 
-**Dependencies:** core learning flow (Phases 3–5) so the avatar has states to
+**Dependencies:** core learning flow (Phases 4–6) so the avatar has states to
 reflect.
 
 **Risks:** bundle weight; WebGL support/performance on weaker devices.
@@ -159,7 +193,7 @@ regressing performance or the build.
 
 ---
 
-## Phase 7 — Polish, demo & deployment
+## Phase 8 — Polish, demo & deployment
 
 **Goal:** a demonstrable, deployed prototype.
 
