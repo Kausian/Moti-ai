@@ -1,24 +1,64 @@
-import type { ChatMessage, MotiResponseKind } from "@/lib/types";
-import { MotiMirrorCard } from "./MotiMirrorCard";
-import { SourceChip } from "./SourceChip";
-import { IconArrowRight, IconSparkles } from "@/components/ui/icons";
+"use client";
 
-const KIND_LABEL: Record<MotiResponseKind, string> = {
-  answer: "Answer",
-  "invite-explanation": "Invites you to explain",
-  mirror: "Teach-back feedback",
+import type {
+  ConversationMessage,
+  ConversationSource,
+  MotiResponseMode,
+} from "@/lib/types";
+import { IconSource, IconSparkles } from "@/components/ui/icons";
+import { LearningActions } from "./LearningActions";
+
+const MODE_LABEL: Record<MotiResponseMode, string> = {
+  "grounded-answer": "Grounded answer",
+  "clarifying-question": "Clarifying question",
+  "insufficient-knowledge": "Not in your material",
+  blocked: "Blocked",
 };
 
-export function ChatMessageItem({ message }: { message: ChatMessage }) {
-  if (message.role === "learner") {
+interface ChatMessageItemProps {
+  message: ConversationMessage;
+  disabled: boolean;
+  onExplainSimply: () => void;
+  onGiveExample: () => void;
+  onAskFollowUp: () => void;
+  onPreviewSource: (source: ConversationSource) => void;
+}
+
+function TypingIndicator() {
+  return (
+    <span className="inline-flex items-center gap-1" aria-label="Moti is thinking">
+      {[0, 1, 2].map((dot) => (
+        <span
+          key={dot}
+          aria-hidden
+          className="status-dot-pulse h-1.5 w-1.5 rounded-full bg-moti-navy-soft"
+          style={{ animationDelay: `${dot * 0.2}s` }}
+        />
+      ))}
+    </span>
+  );
+}
+
+export function ChatMessageItem({
+  message,
+  disabled,
+  onExplainSimply,
+  onGiveExample,
+  onAskFollowUp,
+  onPreviewSource,
+}: ChatMessageItemProps) {
+  if (message.role === "user") {
     return (
       <div className="flex justify-end">
-        <div className="max-w-[85%] rounded-2xl rounded-br-md bg-moti-navy px-4 py-2.5 text-sm leading-6 text-white shadow-sm">
+        <div className="max-w-[85%] whitespace-pre-wrap rounded-2xl rounded-br-md bg-moti-navy px-4 py-2.5 text-sm leading-6 text-white shadow-sm">
           {message.content}
         </div>
       </div>
     );
   }
+
+  const isSending = message.status === "sending";
+  const sources = message.sources ?? [];
 
   return (
     <div className="flex gap-2.5">
@@ -31,46 +71,57 @@ export function ChatMessageItem({ message }: { message: ChatMessage }) {
       <div className="min-w-0 flex-1">
         <div className="mb-1 flex flex-wrap items-center gap-2">
           <span className="text-sm font-semibold text-moti-navy">Moti</span>
-          {message.kind && (
+          {message.responseMode && !isSending && (
             <span className="rounded-full bg-moti-navy/5 px-2 py-0.5 text-[11px] font-medium text-moti-navy-soft">
-              {KIND_LABEL[message.kind]}
+              {MODE_LABEL[message.responseMode]}
             </span>
           )}
         </div>
 
         <div className="rounded-2xl rounded-tl-md border border-moti-line bg-white px-4 py-2.5 text-sm leading-6 text-moti-navy shadow-sm">
-          {message.content}
+          {isSending ? (
+            <TypingIndicator />
+          ) : (
+            <p className="whitespace-pre-wrap break-words">{message.content}</p>
+          )}
         </div>
 
-        {message.mirror && (
-          <div className="mt-2">
-            <MotiMirrorCard mirror={message.mirror} />
-          </div>
-        )}
-
-        {message.sources && !message.mirror && (
+        {sources.length > 0 && (
           <div className="mt-2 flex flex-wrap gap-1.5">
-            {message.sources.map((source) => (
-              <SourceChip key={source.id} source={source} />
+            {sources.map((source) => (
+              <button
+                key={source.id}
+                type="button"
+                onClick={() => onPreviewSource(source)}
+                className="inline-flex max-w-full items-center gap-1.5 rounded-full border border-moti-line bg-moti-navy/[0.03] px-2.5 py-1 text-xs text-moti-navy-soft transition-colors hover:border-moti-navy/30 hover:bg-moti-navy/5 focus-visible:border-moti-navy/40"
+              >
+                <IconSource className="h-3.5 w-3.5 shrink-0" />
+                <span className="truncate font-medium text-moti-navy">
+                  {source.documentTitle}
+                </span>
+                {source.sectionHeading && (
+                  <>
+                    <span aria-hidden>·</span>
+                    <span className="truncate">{source.sectionHeading}</span>
+                  </>
+                )}
+              </button>
             ))}
           </div>
         )}
 
-        {message.suggestedActions && message.suggestedActions.length > 0 && (
-          <div className="mt-2 flex flex-wrap items-center gap-1.5">
-            <span className="text-[11px] font-medium uppercase tracking-wide text-moti-navy-soft">
-              Suggested
-            </span>
-            {message.suggestedActions.map((action) => (
-              <span
-                key={action}
-                className="inline-flex items-center gap-1 rounded-full border border-moti-line bg-white px-2.5 py-1 text-xs font-medium text-moti-navy-soft"
-              >
-                <IconArrowRight className="h-3 w-3" />
-                {action}
-              </span>
-            ))}
-          </div>
+        {!isSending && message.suggestedActions && (
+          <LearningActions
+            actions={message.suggestedActions}
+            hasSources={sources.length > 0}
+            disabled={disabled}
+            onExplainSimply={onExplainSimply}
+            onGiveExample={onGiveExample}
+            onShowSource={() => {
+              if (sources.length > 0) onPreviewSource(sources[0]);
+            }}
+            onAskFollowUp={onAskFollowUp}
+          />
         )}
       </div>
     </div>

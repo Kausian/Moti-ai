@@ -194,3 +194,101 @@ export interface KnowledgeRetrievalResponse {
   results: KnowledgeRetrievalResult[];
   hasRelevantKnowledge: boolean;
 }
+
+// ---------------------------------------------------------------------------
+// Phase 5 — Gemini-grounded conversation (local retrieval, remote generation)
+// ---------------------------------------------------------------------------
+
+export type ConversationRole = "user" | "assistant";
+
+export interface ConversationHistoryItem {
+  role: ConversationRole;
+  content: string;
+}
+
+/** A retrieved source excerpt the client sends to the server for one question. */
+export interface ChatSourceInput {
+  chunkId: string;
+  documentId: string;
+  documentTitle: string;
+  sectionHeading?: string;
+  chunkIndex: number;
+  content: string;
+}
+
+/** The request the browser POSTs to /api/chat. All fields are untrusted. */
+export interface MotiChatRequest {
+  message: string;
+  history: ConversationHistoryItem[];
+  course: {
+    title: string;
+    learnerLevel: LearnerLevel;
+    learningObjective: string;
+    assistantInstructions: string;
+  };
+  sources: ChatSourceInput[];
+}
+
+export type MotiResponseMode =
+  | "grounded-answer"
+  | "clarifying-question"
+  | "insufficient-knowledge"
+  | "blocked";
+
+export type SuggestedLearningAction =
+  | "explain-simply"
+  | "give-example"
+  | "show-source"
+  | "ask-follow-up";
+
+/** The structured JSON Moti must return (validated at runtime). */
+export interface MotiStructuredResponse {
+  responseMode: MotiResponseMode;
+  answer: string;
+  knowledgeSufficient: boolean;
+  usedSourceIds: string[];
+  suggestedActions: SuggestedLearningAction[];
+  followUpQuestion?: string;
+}
+
+export type ChatErrorCode =
+  | "invalid-request"
+  | "not-configured"
+  | "auth-failed"
+  | "model-unavailable"
+  | "rate-limited"
+  | "timeout"
+  | "safety-blocked"
+  | "malformed-response"
+  | "provider-error";
+
+/** The safe error shape returned to the client (never a raw provider error). */
+export interface ChatErrorPayload {
+  code: ChatErrorCode;
+  message: string;
+  retryable: boolean;
+}
+
+export type ConversationMessageStatus = "complete" | "sending" | "failed";
+
+/** A source attached to a completed answer, shown as a chip / preview. */
+export interface ConversationSource {
+  id: string;
+  documentTitle: string;
+  sectionHeading?: string;
+  content: string;
+  chunkIndex: number;
+}
+
+/** A single message held in the in-memory conversation (not persisted). */
+export interface ConversationMessage {
+  id: string;
+  role: ConversationRole;
+  content: string;
+  /** ISO 8601 timestamp. */
+  createdAt: string;
+  status: ConversationMessageStatus;
+  responseMode?: MotiResponseMode;
+  sources?: ConversationSource[];
+  suggestedActions?: SuggestedLearningAction[];
+}

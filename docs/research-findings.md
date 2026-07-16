@@ -101,6 +101,27 @@ rule, the teach-back loop, and visible mastery tracking.
 | 3D assistant | React Three Fiber + Three.js | 2D/Lottie | Delivers the "meaningful 3D assistant" differentiator with a mainstream React stack. |
 | Styling | Tailwind CSS v4 | CSS Modules; UI kit | Fast, consistent, token-driven brand system; no heavy dependency. |
 
+## Gemini SDK and API-path decision (Phase 5)
+
+- **SDK:** the current official JavaScript SDK is **`@google/genai`** (installed
+  `2.12.0`), **not** the deprecated `@google/generative-ai`. Node engine `>=20`
+  (satisfied by Node 24). It is used **only** server-side.
+- **API path:** the SDK exposes both `ai.models.generateContent` and a newer
+  `ai.interactions` API. We chose **`generateContent`**. Reason: in this SDK
+  version the Interactions API is oriented toward stateful/agentic use (agents,
+  triggers, tools, MCP, Google Search) — all explicitly out of scope for this
+  phase — while `generateContent` provides the cleanest, best-typed structured
+  JSON flow (`responseMimeType` + `responseSchema`), `systemInstruction`,
+  `abortSignal`, and safety/`finishReason` fields for a stateless single-turn
+  grounded request with client-managed history. One path only.
+- **Model:** confirmed default/fallback `gemini-3.1-flash-lite`, overridable via
+  `GEMINI_MODEL`. It was verified working against the real Gemini API for this
+  project and returns real grounded answers. `gemini-3.5-flash` was tried first
+  but returned HTTP 503 for this project, so the confirmed default was switched to
+  `gemini-3.1-flash-lite`.
+- **Grounding stays local:** retrieval runs in the browser; only the selected
+  excerpts are sent. Gemini does not perform document retrieval.
+
 ## Assumptions
 
 - **A1:** Gemini's free tier is sufficient for prototype-level usage and demo.
@@ -128,4 +149,10 @@ rule, the teach-back loop, and visible mastery tracking.
 - localStorage means no multi-device or multi-user persistence.
 - Misconception detection is model-driven and best-effort, not guaranteed.
 - Free-tier AI limits (rate/quotas) may constrain heavy demo usage.
+- Prompt-injection defences (hard rules before configuration, delimited/escaped
+  untrusted sources, source-id re-validation) reduce but cannot eliminate the
+  risk; this is a prototype, not a hardened system.
+- The `POST /api/chat` endpoint is public and unauthenticated in this prototype;
+  production would require server-side rate limiting and authentication.
+- Conversation history is in-memory only and not persisted across reloads.
 - The 3D assistant requires WebGL and is not optimised for low-end/mobile devices.

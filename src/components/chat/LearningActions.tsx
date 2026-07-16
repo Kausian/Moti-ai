@@ -1,45 +1,80 @@
+"use client";
+
 import type { ComponentType, SVGProps } from "react";
-import type { LearningAction } from "@/lib/types";
+import type { SuggestedLearningAction } from "@/lib/types";
 import {
+  IconArrowRight,
   IconBook,
   IconChat,
   IconLightbulb,
-  IconRepeat,
-  IconTarget,
 } from "@/components/ui/icons";
 
-const ACTION_ICONS: Record<string, ComponentType<SVGProps<SVGSVGElement>>> = {
-  "explain-simply": IconChat,
-  "give-example": IconLightbulb,
-  "challenge-me": IconTarget,
-  "teach-it-back": IconRepeat,
-  "show-source": IconBook,
+const ACTION_CONFIG: Record<
+  SuggestedLearningAction,
+  { label: string; Icon: ComponentType<SVGProps<SVGSVGElement>> }
+> = {
+  "explain-simply": { label: "Explain simply", Icon: IconChat },
+  "give-example": { label: "Give an example", Icon: IconLightbulb },
+  "show-source": { label: "Show source", Icon: IconBook },
+  "ask-follow-up": { label: "Ask a follow-up", Icon: IconArrowRight },
 };
 
-// Static quick actions. Fully styled for hover / active / focus and a
-// disabled-ready state, but not wired to behaviour in this phase.
-export function LearningActions({ actions }: { actions: LearningAction[] }) {
+interface LearningActionsProps {
+  actions: SuggestedLearningAction[];
+  hasSources: boolean;
+  disabled: boolean;
+  onExplainSimply: () => void;
+  onGiveExample: () => void;
+  onShowSource: () => void;
+  onAskFollowUp: () => void;
+}
+
+// Renders the actions Moti suggested for one answer. "show-source" opens a local
+// preview and never calls the API, so it stays enabled while a request is
+// pending; the others send a grounded follow-up and are disabled while pending.
+export function LearningActions({
+  actions,
+  hasSources,
+  disabled,
+  onExplainSimply,
+  onGiveExample,
+  onShowSource,
+  onAskFollowUp,
+}: LearningActionsProps) {
+  const handlers: Record<SuggestedLearningAction, () => void> = {
+    "explain-simply": onExplainSimply,
+    "give-example": onGiveExample,
+    "show-source": onShowSource,
+    "ask-follow-up": onAskFollowUp,
+  };
+
+  const visible = actions.filter(
+    (action) => action !== "show-source" || hasSources,
+  );
+  if (visible.length === 0) return null;
+
   return (
-    <div>
-      <div role="group" aria-label="Learning actions" className="flex flex-wrap gap-2">
-        {actions.map((action) => {
-          const Icon = ACTION_ICONS[action.id] ?? IconChat;
-          return (
-            <button
-              key={action.id}
-              type="button"
-              title={action.hint}
-              className="inline-flex items-center gap-1.5 rounded-full border border-moti-line bg-white px-3 py-1.5 text-sm font-medium text-moti-navy transition-colors hover:border-moti-navy/30 hover:bg-moti-navy/5 active:bg-moti-navy/10 focus-visible:border-moti-navy/40 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              <Icon className="h-4 w-4 text-moti-navy-soft" />
-              {action.label}
-            </button>
-          );
-        })}
-      </div>
-      <p className="mt-1.5 text-[11px] text-moti-navy-soft">
-        Learning actions are visual in this preview phase.
-      </p>
+    <div
+      role="group"
+      aria-label="Suggested actions"
+      className="mt-2 flex flex-wrap items-center gap-1.5"
+    >
+      {visible.map((action) => {
+        const { label, Icon } = ACTION_CONFIG[action];
+        const isDisabled = disabled && action !== "show-source";
+        return (
+          <button
+            key={action}
+            type="button"
+            onClick={handlers[action]}
+            disabled={isDisabled}
+            className="inline-flex items-center gap-1.5 rounded-full border border-moti-line bg-white px-2.5 py-1 text-xs font-medium text-moti-navy transition-colors hover:border-moti-navy/30 hover:bg-moti-navy/5 focus-visible:border-moti-navy/40 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <Icon className="h-3.5 w-3.5 text-moti-navy-soft" />
+            {label}
+          </button>
+        );
+      })}
     </div>
   );
 }

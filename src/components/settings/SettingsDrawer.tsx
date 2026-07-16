@@ -20,7 +20,7 @@ import { GroundingLab } from "./GroundingLab";
 import {
   PlainTextPreviewDialog,
   type PreviewContent,
-} from "./PlainTextPreviewDialog";
+} from "@/components/ui/PlainTextPreviewDialog";
 
 export const SETTINGS_DRAWER_ID = "settings-drawer";
 

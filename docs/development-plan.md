@@ -167,29 +167,48 @@ to any model. Grounded generation is Phase 5.
 
 ---
 
-## Phase 5 — Source-grounded conversation
+## Phase 5 — Source-grounded conversation _(complete)_
 
-**Goal:** grounded Q&A through a server Route Handler.
+**Goal:** grounded, multi-turn Q&A through a secure server Route Handler, with
+local retrieval feeding remote generation.
 
-**Deliverables**
-- `/api/chat` Route Handler calling Gemini server-side.
-- Grounding/prompt-assembly module (`lib/grounding`) that injects source context
-  and enforces "answer only from sources; else say so".
-- Prompt-injection defence: uploaded content treated as data, not instructions.
-- Chat UI wired to the handler.
-- `.env.local` usage documented; key server-only.
+**Deliverables (built)**
+- `POST /api/chat` Node route handler; the API key stays server-side and is
+  verified absent from the client bundle.
+- Server AI layer (`lib/ai`): layered system instruction, prompt builder
+  (delimited/escaped untrusted sources), JSON `responseSchema`, runtime response
+  validation, source-id verification, and safe error mapping.
+- Request validation + conversation utilities (`lib/chat`): bounded, untrusted
+  input; ≤6 history; ≤4 sources; history/source mapping.
+- Live conversation UI: `useMotiConversation` hook, functional composer
+  (Enter-to-send, char count, cancel), learning actions, source previews,
+  error + retry, API-status states.
+- Privacy-boundary UX: persistent notice + per-session first-use acknowledgement.
+- 45s server timeout + client-cancellable requests (`AbortController`).
 
-**New dependencies:** Gemini access (server-side); no client SDK.
+**New dependencies:** `@google/genai` 2.12.0 (official Gemini SDK, server-side
+only). No client AI SDK, no HTTP/form/state/streaming/retry libraries.
 
-**Dependencies:** Phase 4 (retrieval selects the source sections to ground on).
+**Dependencies:** Phase 4 (local retrieval selects the source sections to ground on).
 
-**Risks:** hallucination/off-source drift; key leakage; free-tier rate limits.
+**Selected API path:** `ai.models.generateContent` (not the Interactions API,
+which in this SDK is oriented toward stateful/agentic use out of scope here).
+Model default/fallback `gemini-3.1-flash-lite` — confirmed working against the
+real Gemini API for this project (it returns real grounded answers), overridable
+via `GEMINI_MODEL`. During testing `gemini-3.5-flash` returned HTTP 503 for this
+project.
 
-**Validation:** grounded answers cite/stay within sources; out-of-source
-questions are declined; no key in client bundle; lint + build clean.
+**Validation:** 78 automated tests (no real API calls); grounded answers cite
+only supplied source ids; insufficient-knowledge path returns no invented facts;
+errors are categorised safely; no `any`, no `dangerouslySetInnerHTML`, no full
+documents sent, no key in the client bundle; lint, tests, and build clean.
 
-**Definition of done:** a user can hold a grounded conversation about their
-material, and Moti refuses to answer beyond the sources.
+**Definition of done:** a learner holds a grounded conversation about their
+material; Moti refuses to answer beyond the sources; retrieval remains local and
+only excerpts are sent.
+
+**Not in this phase:** Moti Mirror evaluation, quizzes, mastery updates, Memory
+Echo scheduling, 3D — and conversation history is not persisted across reloads.
 
 ---
 

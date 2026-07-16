@@ -39,64 +39,79 @@ remember through spaced review — with a friendly animated 3D assistant alongsi
 
 ## Development status
 
-**Phase 4 — Transparent knowledge retrieval & Grounding Lab (current).** Moti now
-turns your documents into a searchable, in-memory index and can retrieve the
-most relevant source sections for a question — all locally, and all before any AI
-is involved.
+**Phase 5 — Gemini-grounded conversation (current).** The conversation panel is
+now live: ask a question, Moti retrieves the relevant source sections **locally**,
+then a secure server route sends only those excerpts to **Google Gemini** and
+returns a structured, source-grounded answer.
 
 What works in this phase:
 
-- **Section-aware chunking** — documents are split at Markdown headings
-  (`#`/`##`/`###`) and paragraph boundaries into overlapping chunks (~900 target,
-  1,200 hard max, ~120 overlap), preserving heading metadata and exact offsets.
-- **In-memory lexical index** — a **BM25-inspired** term index built from the
-  active documents, with document-title, section-heading, exact-phrase, and
-  query-coverage boosts. Weights are transparent prototype heuristics, not a
-  scientifically tuned configuration.
-- **Grounding Lab** (a settings tab) — ask a question and see the exact source
-  sections Moti would ground on: rank, document, section, chunk, matched terms, a
-  plain-text excerpt, a full **Retrieval score** breakdown, and a full-chunk
-  preview. It clearly reports when nothing relevant is found.
-- **Automated tests** (Vitest) — chunking, tokenization, retrieval ranking, and
-  the sample-course queries are covered by `npm test`.
-- Everything from Phase 3 (configuration, PDF/TXT/Markdown ingestion, previews,
-  removal, reset, versioned `localStorage` persistence) still works.
+- **Real multi-turn conversation** — grounded answers with the sources actually
+  used shown as chips (click to preview the exact excerpt sent to Gemini).
+- **Local retrieval, remote generation** — the Phase 4 lexical engine still picks
+  the top ≤4 chunks in the browser; only those excerpts (plus the question,
+  recent history, and course config) are sent. **Your full documents are never
+  sent.**
+- **Learning actions** — "Explain simply" and "Give an example" send grounded
+  follow-ups; "Show source" opens a local preview (no extra API call); "Ask a
+  follow-up" focuses the composer.
+- **Honest failure modes** — insufficient-knowledge answers when the material
+  doesn't cover a question; clear, categorised errors (not configured / auth /
+  rate limit / timeout / safety / malformed / provider) with a Retry for
+  retryable ones; **Cancel** an in-flight request.
+- **Privacy transparency** — a persistent notice plus a per-session first-use
+  acknowledgement before the first AI request.
+- **Automated tests** (Vitest, **78 total**) — request validation, prompt
+  construction, response validation, error mapping, conversation utilities, and
+  prompt-injection cases. **No test calls the real API.**
+- Everything from Phases 3–4 (configuration, ingestion, previews, persistence,
+  and the fully-local Grounding Lab) still works.
 
-### How retrieval works (and what it is not)
+### AI configuration
 
-- **Lexical, not semantic.** Retrieval matches words, not meaning — there are **no
-  embeddings and no vector database**. This keeps it transparent, deterministic,
-  dependency-free, and instant on the small local collection.
-- **Derived, never persisted.** The index and chunks are rebuilt from the stored
-  documents whenever the document set changes; only the documents themselves live
-  in `localStorage`.
-- **In-browser only.** No query or document is ever sent over the network.
-- The **Retrieval score** is an internal ranking value, never labelled as an "AI
-  confidence" score.
+- SDK: **`@google/genai` 2.12.0**, server-side only, via `ai.models.generateContent`
+  with a structured `responseSchema`.
+- Model: read from **`GEMINI_MODEL`**; server-side fallback
+  **`gemini-3.1-flash-lite`** — the confirmed default, verified working against the
+  real Gemini API for this project and returning real grounded answers. (During
+  testing, `gemini-3.5-flash` returned HTTP 503 for this project; the model stays
+  configurable via `GEMINI_MODEL`.)
+- The **`GEMINI_API_KEY`** lives only in server env (`.env.local`), never uses a
+  `NEXT_PUBLIC_` prefix, and is absent from the client bundle. The app builds and
+  runs without it; the conversation reports *"AI conversation is not configured"*
+  until one is set.
 
-### Prototype limits (Moti AI safeguards, not browser limits)
+### Privacy boundary (changed in Phase 5)
 
-- Up to **5 documents**, **5 MB per file**, **500,000 characters per document**,
-  and **1,000,000 characters total** across all active documents (the sample
-  course counts toward this total). Retrieval questions are capped at **300
-  characters**.
+Phases 3–4 were fully local. Now, **when you send a message**, your question,
+recent conversation, and up to four relevant source excerpts are sent to the
+configured Gemini API. Your full document collection is **not** sent, documents
+stay in this browser, and the conversation is not persisted by Moti AI.
+Provider-side handling follows the configured Gemini account and terms.
 
-### Known limitations
+### Grounding & prompt-injection defence
 
-- **No OCR.** Scanned or image-only PDFs contain no extractable text and are
-  rejected with a clear message.
-- Lexical retrieval has no synonym or concept understanding (no stemming): a
-  question must share actual words with the source to match. This is adequate for
-  the small prototype collection; large corpora would want embedding-based search.
-- Persistence is per-browser/per-device only; there is no cloud sync.
+- Answers to course-specific questions come **only** from the supplied excerpts;
+  Moti says so when the material is insufficient rather than inventing facts.
+- Source text is delimited and escaped as **untrusted data**; hard-coded system
+  rules always precede the user-configurable coaching style; the model may only
+  cite source ids that were supplied, and returned ids are re-validated.
+- Prompt injection cannot be eliminated entirely — this is a prototype defence,
+  not a guarantee.
 
-### Not connected yet (honest placeholders)
+### Prototype limits & security notes
 
-- **No AI answers.** Retrieval selects the source sections a grounded answer
-  *would* use, but **no LLM is connected** — the conversation panel still shows an
-  illustrative Moti Mirror example. Grounded generation arrives in the next phase.
-- The 3D assistant remains a styled placeholder (React Three Fiber / Three.js
-  come later).
+- Request caps: message **300 chars**, history **6 items**, sources **4** (≤1,500
+  chars each, ≤6,000 total). Server timeout **45s**.
+- The `POST /api/chat` endpoint is public and unauthenticated; a production
+  deployment would need server-side rate limiting and auth. No third-party
+  rate-limiter is added in this phase.
+
+### Not connected yet (later phases)
+
+- **No** Moti Mirror teach-back evaluation, quizzes, mastery updates, or Memory
+  Echo scheduling. The 3D assistant remains a styled placeholder. Conversation
+  history is **not** persisted across reloads.
 
 See [`docs/development-plan.md`](docs/development-plan.md) for the full phase plan.
 

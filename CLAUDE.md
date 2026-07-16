@@ -93,18 +93,24 @@ away from them without an explicit decision recorded here.
 - **Brand tokens** are defined in **`src/app/globals.css`** (Moti palette +
   `@theme` colour tokens + entrance animation). Style with these tokens; do not
   scatter raw hex colours across components.
+- **`pdfjs-dist`** — client-side PDF text extraction (Phase 3).
+- **`vitest`** (dev-only) — unit tests for pure chunking/retrieval/AI logic.
+- **`@google/genai` 2.12.0** — official Gemini SDK, used **only** server-side in
+  `src/app/api/chat/route.ts` via the **`ai.models.generateContent`** API (not the
+  Interactions API — see `docs/research-findings.md`). Structured JSON output via
+  `responseSchema`. Model read from **`GEMINI_MODEL`** (server-side fallback
+  **`gemini-3.1-flash-lite`**, the confirmed default verified working against the
+  real Gemini API for this project; `gemini-3.5-flash` returned HTTP 503 for this
+  project during testing). The **`GEMINI_API_KEY`** is server-only: never
+  `NEXT_PUBLIC_`, never in a client component or the bundle.
 
 ### Direction for later phases (not yet installed)
 
-- **Next.js Route Handlers** for all server logic and AI calls.
-- **Gemini API** (free tier) called **only** from server-side code.
 - **React Three Fiber + Three.js** for the 3D assistant (later phase).
-- **PDF.js** for client-side PDF text extraction (later phase).
-- **Browser localStorage** for prototype persistence.
 - **Vercel** for deployment.
 
-Feature-specific dependencies (R3F, Three.js, PDF.js, Gemini SDK, etc.) are
-introduced **only in the phase that uses them** — never earlier.
+Feature-specific dependencies (R3F, Three.js, etc.) are introduced **only in the
+phase that uses them** — never earlier.
 
 ## 7. Architecture principles
 

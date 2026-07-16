@@ -11,9 +11,7 @@ import { useCourseConfiguration } from "@/hooks/useCourseConfiguration";
 import type { LearnerLevel } from "@/lib/types";
 import {
   LOOP_STAGES,
-  demoConversation,
   demoCourse,
-  learningActions,
   learningConcepts,
   reviewItems,
 } from "@/data/demo-data";
@@ -71,7 +69,7 @@ export function LearningWorkspace() {
             aria-labelledby="tab-conversation"
             className={`area-conversation ${visibility("conversation")} md:block lg:min-h-0`}
           >
-            <ConversationPanel messages={demoConversation} actions={learningActions} />
+            <ConversationPanel />
           </div>
 
           <div
