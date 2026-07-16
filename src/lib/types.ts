@@ -119,3 +119,78 @@ export interface CourseConfiguration {
   assistantInstructions: string;
   documents: KnowledgeDocument[];
 }
+
+// ---------------------------------------------------------------------------
+// Phase 4 — knowledge chunking, indexing & retrieval (all in-memory, local)
+// ---------------------------------------------------------------------------
+
+/** A section- and paragraph-aware slice of a knowledge document. */
+export interface KnowledgeChunk {
+  /** Stable id of the form `${documentId}:chunk:${chunkIndex}`. */
+  id: string;
+  documentId: string;
+  documentTitle: string;
+  documentType: SupportedDocumentType;
+  /** Zero-based index within its document. */
+  chunkIndex: number;
+  /** The most recent Markdown heading above this chunk, when present. */
+  sectionHeading?: string;
+  content: string;
+  /** Offsets into the document's original `content` (never mutated). */
+  characterStart: number;
+  characterEnd: number;
+  characterCount: number;
+}
+
+/** A chunk enriched with the derived data the lexical index needs. */
+export interface IndexedKnowledgeChunk extends KnowledgeChunk {
+  /** Lowercased title + heading + content, used for exact-phrase matching. */
+  searchableText: string;
+  /** Meaningful content tokens (stop words removed). */
+  terms: string[];
+  termFrequencies: Record<string, number>;
+  /** Number of terms — the chunk length used for BM25 normalization. */
+  length: number;
+}
+
+export interface KnowledgeIndexStats {
+  documentCount: number;
+  chunkCount: number;
+  totalIndexedCharacters: number;
+  averageChunkLength: number;
+}
+
+/** The in-memory index derived from the active documents (never persisted). */
+export interface KnowledgeIndex {
+  chunks: IndexedKnowledgeChunk[];
+  stats: KnowledgeIndexStats;
+  /** Chunks each term appears in, for IDF. */
+  documentFrequencies: Record<string, number>;
+  /** Average terms-per-chunk, for BM25 length normalization. */
+  averageTermCount: number;
+}
+
+/** Transparent, per-signal breakdown of a chunk's retrieval score. */
+export interface RetrievalScoreBreakdown {
+  contentScore: number;
+  titleBoost: number;
+  headingBoost: number;
+  phraseBoost: number;
+  coverageBoost: number;
+  total: number;
+}
+
+export interface KnowledgeRetrievalResult {
+  chunk: KnowledgeChunk;
+  score: number;
+  matchedTerms: string[];
+  scoreBreakdown: RetrievalScoreBreakdown;
+  excerpt: string;
+}
+
+export interface KnowledgeRetrievalResponse {
+  query: string;
+  meaningfulQueryTerms: string[];
+  results: KnowledgeRetrievalResult[];
+  hasRelevantKnowledge: boolean;
+}

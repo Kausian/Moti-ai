@@ -95,7 +95,7 @@ rule, the teach-back loop, and visible mastery tracking.
 | Framework | Next.js App Router (v16) | SPA + separate API | One codebase for UI + server routes; easy Vercel deploy; keeps secrets server-side. |
 | AI provider | Google Gemini (free tier) | Other hosted LLMs; local models | Free, capable, simple server API; fits "no paid APIs". |
 | AI call location | Server Route Handlers | Direct client calls | Keeps API key off the client; enables grounding + injection defence server-side. |
-| Grounding (prototype) | Lightweight server-side context assembly | Full vector-DB RAG | Demonstrates grounding within scope/time without infra; RAG noted as future work. |
+| Retrieval (prototype) | Client-side lexical, BM25-inspired ranking | Embeddings + vector DB | Transparent, deterministic, and dependency-free over a small local set; you can see *why* a chunk matched. Embeddings are the upgrade path for large corpora. |
 | PDF extraction | PDF.js (client) | Server parsing service | Free, no extra backend; keeps files on the client until needed. |
 | Persistence | Browser localStorage | Cloud database | Challenge excludes cloud DB; localStorage is enough to demo state across reloads. |
 | 3D assistant | React Three Fiber + Three.js | 2D/Lottie | Delivers the "meaningful 3D assistant" differentiator with a mainstream React stack. |
@@ -121,6 +121,10 @@ rule, the teach-back loop, and visible mastery tracking.
   established learning-science principles and common experience.
 - Prototype grounding is lightweight, not a production retrieval system; very
   large source sets are out of scope for this phase.
+- Retrieval is lexical (BM25-inspired), so it matches words, not meaning: there is
+  no synonym expansion or stemming. A question must share actual terms with the
+  source. This is adequate for the small prototype collection; embedding-based
+  semantic search would be needed for large or vocabulary-diverse corpora.
 - localStorage means no multi-device or multi-user persistence.
 - Misconception detection is model-driven and best-effort, not guaranteed.
 - Free-tier AI limits (rate/quotas) may constrain heavy demo usage.

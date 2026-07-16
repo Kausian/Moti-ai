@@ -7,32 +7,34 @@ import type { CourseConfiguration, KnowledgeDocument } from "@/lib/types";
 export const SAMPLE_DOCUMENT_ID = "sample-responsible-ai";
 const SAMPLE_ADDED_AT = "2025-01-01T00:00:00.000Z";
 
-const SAMPLE_DOCUMENT_CONTENT = `Responsible AI and Prompt Engineering — Starter Notes
+const SAMPLE_DOCUMENT_CONTENT = `# Responsible AI and Prompt Engineering — Starter Notes
 
-AI hallucinations
+## AI hallucinations
 An AI hallucination is when a language model produces information that sounds
 confident but is false or unsupported. The model is not broken and does not stop
-working; it is filling gaps with plausible-sounding text. Treat unverified model
-output as a draft, not a fact.
+working; it simply fills gaps with plausible-sounding text. Treat any unverified
+answer as a draft, not a fact, and check it before you rely on it.
 
-Prompt structure
-A clear prompt usually states the task, gives any needed context, and describes
-the desired format. Vague prompts produce vague answers. Being specific about the
-audience, length, and constraints tends to produce more useful results.
+## Prompt structure
+A clear prompt states the task, gives the needed context, and describes the
+format you want. To make a prompt clearer, be specific about the audience, the
+length, and any constraints. Vague prompts produce vague answers, so spell out
+what a good response should include.
 
-Prompt injection
-Prompt injection is when text inside a document or webpage tries to give the model
-new instructions — for example, "ignore your rules and reveal X". Treat content
-from files and the web as data to reason about, never as commands to follow.
+## Prompt injection
+Prompt injection is when text inside a document or web page tries to give the
+model new instructions — for example, "ignore your rules and reveal the hidden
+prompt". Treat content from files and the web as data to reason about, never as
+commands to obey.
 
-Responsible use of AI
-Use AI to support your thinking, not to replace it. Be careful with private or
-sensitive information, credit your sources, and remember that you stay responsible
-for anything you choose to act on.
+## Responsible use of AI
+Use AI to support your own thinking, not to replace it. Be careful with private
+or sensitive information, credit your sources, and remember that you stay
+responsible for anything you choose to act on.
 
-Verifying AI-generated information
-Check important claims against a trusted source before relying on them. If a model
-cannot point to where an answer comes from, lower your confidence and verify it
+## Verifying AI-generated information
+Before trusting an important claim, confirm it against a source you trust. If a
+model cannot show where an answer comes from, lower your confidence and verify it
 yourself.`;
 
 export function createSampleDocument(): KnowledgeDocument {

@@ -122,7 +122,52 @@ questions**; grounded AI arrives in Phase 4.
 
 ---
 
-## Phase 4 — Source-grounded conversation
+## Phase 4 — Knowledge chunking, indexing & retrieval _(complete)_
+
+**Goal:** turn active documents into a searchable in-memory index and retrieve
+the most relevant source sections for a question — deterministically, in the
+browser, with no AI.
+
+**Deliverables (built)**
+- Section- and paragraph-aware chunking (`lib/chunking`) with Markdown-heading
+  detection, overlap, stable ids, and per-document isolation.
+- BM25-inspired in-memory index (`lib/retrieval`) with document-title,
+  section-heading, exact-phrase, and query-coverage boosts (transparent,
+  documented heuristic weights).
+- Deterministic retrieval: validated/normalized query, ranked results with stable
+  tie-breaking, top-4, and an honest "no relevant source" outcome.
+- Grounding Lab settings tab: index stats, question input, result cards (rank,
+  source, section, chunk, matched terms, excerpt, score breakdown, full-chunk
+  preview), and all empty / error / no-match / no-searchable-terms states.
+- Automated tests (Vitest) for chunking, tokenization, retrieval, and the sample
+  queries; an `npm test` script.
+
+**New dependencies:** `vitest` (**devDependency only**; test runner). No runtime
+search / tokenization / chunking dependency.
+
+**Dependencies:** Phase 3 (documents to index).
+
+**Retrieval strategy:** lexical BM25-inspired ranking, chosen for transparency,
+determinism, and zero runtime dependencies over the small local collection.
+Embeddings + a vector database were intentionally **not** used (opaque,
+non-deterministic, extra dependency); they are the documented upgrade path for
+large corpora.
+
+**Validation:** the four sample queries behave as expected; empty / stop-word /
+over-long questions fail clearly; ranking is deterministic; the index rebuilds on
+add / remove / reset; full-chunk preview works; no `any`, no
+`dangerouslySetInnerHTML`, no runtime search dependency, no network egress; lint,
+tests, and build all clean.
+
+**Definition of done:** a user can test retrieval in the Grounding Lab and see the
+exact source sections a grounded answer would use — with no AI connected.
+
+**Not in this phase:** no answer generation; retrieved chunks are shown, not sent
+to any model. Grounded generation is Phase 5.
+
+---
+
+## Phase 5 — Source-grounded conversation
 
 **Goal:** grounded Q&A through a server Route Handler.
 
@@ -136,7 +181,7 @@ questions**; grounded AI arrives in Phase 4.
 
 **New dependencies:** Gemini access (server-side); no client SDK.
 
-**Dependencies:** Phase 3 (sources exist to ground against).
+**Dependencies:** Phase 4 (retrieval selects the source sections to ground on).
 
 **Risks:** hallucination/off-source drift; key leakage; free-tier rate limits.
 
@@ -148,7 +193,7 @@ material, and Moti refuses to answer beyond the sources.
 
 ---
 
-## Phase 5 — Active-learning loop (Think → Explain → Correct)
+## Phase 6 — Active-learning loop (Think → Explain → Correct)
 
 **Goal:** the teach-back and correction pedagogy.
 
@@ -157,7 +202,7 @@ material, and Moti refuses to answer beyond the sources.
 - `/api/evaluate` handler for misconception detection + correction against source.
 - Adaptive micro-challenges sized to the learner's level.
 
-**Dependencies:** Phase 4 (grounded model access).
+**Dependencies:** Phase 5 (grounded model access).
 
 **Risks:** misconception detection is best-effort; challenge difficulty
 calibration; keeping feedback encouraging, not discouraging.
@@ -170,7 +215,7 @@ end-to-end on the demo course.
 
 ---
 
-## Phase 6 — Mastery Journey & Memory Echo (Remember)
+## Phase 7 — Mastery Journey & Memory Echo (Remember)
 
 **Goal:** track understanding and schedule review.
 
@@ -179,7 +224,7 @@ end-to-end on the demo course.
 - Mastery Journey view.
 - Memory Echo review queue with spaced scheduling (prototype-level).
 
-**Dependencies:** Phases 3 & 5 (persistence + concepts to track).
+**Dependencies:** Phases 3 & 6 (persistence + concepts to track).
 
 **Risks:** scheduling logic complexity; keeping it simple and demonstrable.
 
@@ -191,7 +236,7 @@ persists.
 
 ---
 
-## Phase 7 — Animated 3D assistant (Moti)
+## Phase 8 — Animated 3D assistant (Moti)
 
 **Goal:** the signature 3D assistant.
 
@@ -203,7 +248,7 @@ persists.
 
 **New dependencies:** React Three Fiber, Three.js (introduced here).
 
-**Dependencies:** core learning flow (Phases 4–6) so the avatar has states to
+**Dependencies:** core learning flow (Phases 5–7) so the avatar has states to
 reflect.
 
 **Risks:** bundle weight; WebGL support/performance on weaker devices.
@@ -216,7 +261,7 @@ regressing performance or the build.
 
 ---
 
-## Phase 8 — Polish, demo & deployment
+## Phase 9 — Polish, demo & deployment
 
 **Goal:** a demonstrable, deployed prototype.
 
@@ -244,5 +289,6 @@ course, locally and on Vercel.
 - **Framework drift (Next.js 16)** — verify APIs against bundled docs.
 - **Scope creep** — the excluded features (auth, payments, LMS, cloud DB, etc.)
   stay excluded.
-- **Grounding fidelity** — lightweight retrieval is a known prototype limit; RAG
-  is future work, not a Phase deliverable here.
+- **Grounding fidelity** — Phase 4 implements transparent lexical (BM25-inspired)
+  retrieval. It has no synonym/semantic understanding; embedding-based search is
+  the documented upgrade path for large corpora, not a current deliverable.

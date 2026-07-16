@@ -92,15 +92,58 @@ All ingestion happens **in the browser**; nothing is uploaded anywhere.
    rendered only as plain text and, in later phases, will be passed to the model
    as untrusted source context.
 
-## Planned retrieval flow (prototype)
+## Knowledge retrieval flow (implemented in Phase 4)
 
-1. When the learner interacts, the client selects the relevant configured
-   sources (prototype: lightweight selection / whole-source context for small
-   material, rather than a vector database).
-2. Selected source text is sent to the server with the learner's message.
-3. The server assembles a bounded context window from the sources.
-4. _Future work:_ replace lightweight selection with a proper embedding + vector
-   retrieval (RAG) step for larger source sets.
+Retrieval is **lexical, deterministic, and entirely in-browser** — no embeddings,
+no vector database, and no network calls. It selects the source sections a future
+grounded answer would draw from; it does not generate answers.
+
+```mermaid
+flowchart LR
+  Docs["Knowledge documents\n(stored text)"]
+  Chunk["Section- & paragraph-aware\nchunking (lib/chunking)"]
+  Index["In-memory index\n(BM25-inspired, lib/retrieval)"]
+  Query["Learner question"]
+  Tok["Query tokenization\n(lowercase, stop-words, dedupe)"]
+  Rank["Ranking + boosts\n(title / heading / phrase / coverage)"]
+  Top["Top source sections\n(≤ 4, with matched terms)"]
+
+  Docs --> Chunk --> Index
+  Query --> Tok --> Rank
+  Index --> Rank --> Top
+```
+
+1. **Chunking** (`lib/chunking`): each document is split at Markdown headings and
+   paragraph boundaries into overlapping chunks (target ~900, hard max ~1,200,
+   overlap ~120 characters), preserving the current heading and exact character
+   offsets. Chunk ids are stable (`documentId:chunk:N`); documents are isolated.
+2. **Indexing** (`lib/retrieval/build-index`): each chunk is tokenized (content
+   terms, stop words removed) into term frequencies; the index also stores
+   per-term document frequencies and the average chunk length for BM25.
+3. **Query tokenization** (`lib/retrieval/tokenize`): the question is lowercased,
+   diacritics stripped, punctuation dropped, stop words removed, and duplicate
+   terms de-duplicated.
+4. **Scoring** (`lib/retrieval/score-chunk`): a BM25-inspired content score plus
+   four documented boosts — document-title, section-heading, exact-phrase, and
+   query-coverage. IDF ensures a rare term (e.g. *hallucination*) outweighs a
+   generic one (e.g. *AI*). All values are guarded to stay finite.
+5. **Retrieval** (`lib/retrieval/retrieve-knowledge`): ranks by score with stable
+   tie-breaking (score → document title → chunk index), returns at most four
+   results, and returns none when there is no meaningful term overlap — never
+   padding with irrelevant chunks.
+
+**Why chunks/index are derived, not persisted:** they are a pure function of the
+stored documents, so persisting them would duplicate data and risk drift. The
+`useKnowledgeIndex` hook rebuilds the index via `useMemo` only when the documents
+array changes (add / remove / reset); editing the course title does not rebuild it.
+
+**Why not embeddings + a vector database (yet):** embeddings would add a runtime
+dependency (or a paid/hosted service), obscure *why* a chunk matched, and be
+non-deterministic — the opposite of what this transparent prototype needs over a
+handful of small documents. Lexical BM25 is inspectable from the source, instant,
+and dependency-free. Embedding-based semantic search is the documented upgrade
+path for large corpora, where lexical matching (no synonyms, no stemming) is the
+main limitation.
 
 ## Planned AI request flow
 
@@ -139,6 +182,11 @@ All ingestion happens **in the browser**; nothing is uploaded anywhere.
 - **Local-only document processing (Phase 3):** uploaded/pasted content is
   parsed entirely in the browser and never sent over the network. Only extracted
   text and safe metadata are persisted — never the original binary files.
+- **Local-only retrieval (Phase 4):** chunking, indexing, and search run in the
+  browser. No document or query is sent over the network, no search/analytics
+  service is used, and search history is not persisted. Retrieved chunk text is
+  rendered as plain text (React-escaped `<pre>`), consistent with the document
+  preview.
 - **Untrusted content is rendered as plain text:** extracted document text is
   shown via React-escaped `<pre>` only. `dangerouslySetInnerHTML` is never used;
   Markdown/HTML in documents is never interpreted, so content cannot inject
@@ -154,7 +202,7 @@ All ingestion happens **in the browser**; nothing is uploaded anywhere.
 ## Planned module structure
 
 ```
-# Present structure (through Phase 3 — knowledge configuration & ingestion)
+# Present structure (through Phase 4 — chunking, indexing & retrieval)
 src/
   app/
     layout.tsx            # root layout, fonts, metadata
@@ -168,12 +216,14 @@ src/
     learning/             # JourneyPanel, MemoryEcho
     settings/             # SettingsDrawer, CourseSettingsForm, KnowledgeUploader,
                           #   PasteKnowledgeForm, KnowledgeDocumentList/Card,
-                          #   DocumentPreviewDialog, formPrimitives
+                          #   GroundingLab, RetrievalResultCard,
+                          #   PlainTextPreviewDialog, formPrimitives
     ui/                   # icons (inline SVG), MasteryBadge
   contexts/
     CourseConfigurationContext.tsx  # configuration state boundary (Context)
   hooks/
     useCourseConfiguration.ts       # typed accessor for the context
+    useKnowledgeIndex.ts            # memoized in-memory index (rebuilds on change)
   data/
     demo-data.ts          # typed mock data (conversation, journey, etc.)
     sample-course.ts      # deterministic default course + sample document
@@ -182,17 +232,23 @@ src/
     documents/            # pure ingestion: constants, file-validation,
                           #   normalize-text, duplicates, parse-pdf,
                           #   parse-document, errors, format, id
+    chunking/             # constants, split-sections, chunk-document, build-chunks
+    retrieval/            # constants, stop-words, tokenize, build-index,
+                          #   score-chunk, retrieve-knowledge
     storage/              # course-configuration-storage (versioned localStorage)
+
+# Automated tests (Vitest, dev-only): co-located *.test.ts under lib/chunking
+# and lib/retrieval; configured by vitest.config.ts; run with `npm test`.
 
 # Planned additions (created in the phase that first needs them)
 src/
   app/api/
-    chat/route.ts         # grounded conversation handler (Phase 4)
-    evaluate/route.ts     # teach-back / misconception handler (Phase 5)
+    chat/route.ts         # grounded conversation handler (Phase 5)
+    evaluate/route.ts     # teach-back / misconception handler (Phase 6)
   lib/
     ai/                   # server-only Gemini client + prompt assembly
-    grounding/            # source-context assembly + safety rules
-  three/                  # 3D assistant (React Three Fiber) — Phase 7
+    grounding/            # assembles retrieved chunks into a bounded, safe prompt
+  three/                  # 3D assistant (React Three Fiber) — later phase
 ```
 
 _This layout is a target. Directories are created in the phase that first needs

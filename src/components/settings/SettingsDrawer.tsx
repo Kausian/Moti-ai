@@ -1,8 +1,10 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import type { KnowledgeDocument } from "@/lib/types";
+import type { KnowledgeDocument, KnowledgeRetrievalResult } from "@/lib/types";
 import { useCourseConfiguration } from "@/hooks/useCourseConfiguration";
+import { DOCUMENT_TYPE_LABEL } from "@/lib/documents/constants";
+import { formatCharacterCount } from "@/lib/documents/format";
 import {
   IconAlert,
   IconCheckCircle,
@@ -14,11 +16,35 @@ import { CourseSettingsForm } from "./CourseSettingsForm";
 import { KnowledgeDocumentList } from "./KnowledgeDocumentList";
 import { KnowledgeUploader } from "./KnowledgeUploader";
 import { PasteKnowledgeForm } from "./PasteKnowledgeForm";
-import { DocumentPreviewDialog } from "./DocumentPreviewDialog";
+import { GroundingLab } from "./GroundingLab";
+import {
+  PlainTextPreviewDialog,
+  type PreviewContent,
+} from "./PlainTextPreviewDialog";
 
 export const SETTINGS_DRAWER_ID = "settings-drawer";
 
-type SettingsTab = "course" | "knowledge";
+type SettingsTab = "course" | "knowledge" | "grounding";
+
+function documentToPreview(doc: KnowledgeDocument): PreviewContent {
+  return {
+    title: doc.title,
+    subtitle: `${DOCUMENT_TYPE_LABEL[doc.documentType]} · ${formatCharacterCount(doc.characterCount)}`,
+    note: "Extracted text — shown exactly as read from your document.",
+    body: doc.content,
+  };
+}
+
+function chunkToPreview(result: KnowledgeRetrievalResult): PreviewContent {
+  const { chunk } = result;
+  const heading = chunk.sectionHeading ? `§ ${chunk.sectionHeading} · ` : "";
+  return {
+    title: chunk.documentTitle,
+    subtitle: `${heading}Chunk ${chunk.chunkIndex + 1}`,
+    note: "Retrieved source section — plain text, exactly as indexed.",
+    body: chunk.content,
+  };
+}
 
 interface SettingsDrawerProps {
   open: boolean;
@@ -68,8 +94,9 @@ export function SettingsDrawer({ open, onClose }: SettingsDrawerProps) {
   const { courseIsValid, resetSampleCourse, saveConfiguration } =
     useCourseConfiguration();
   const [activeTab, setActiveTab] = useState<SettingsTab>("course");
-  const [previewDocument, setPreviewDocument] =
-    useState<KnowledgeDocument | null>(null);
+  const [previewContent, setPreviewContent] = useState<PreviewContent | null>(
+    null,
+  );
   const [resetConfirming, setResetConfirming] = useState(false);
 
   const closeButtonRef = useRef<HTMLButtonElement>(null);
@@ -86,8 +113,8 @@ export function SettingsDrawer({ open, onClose }: SettingsDrawerProps) {
   }, [onClose]);
 
   useEffect(() => {
-    previewOpenRef.current = previewDocument !== null;
-  }, [previewDocument]);
+    previewOpenRef.current = previewContent !== null;
+  }, [previewContent]);
 
   const handleSave = () => {
     // Show the Course tab first if required fields are missing, so the inline
@@ -163,12 +190,13 @@ export function SettingsDrawer({ open, onClose }: SettingsDrawerProps) {
         <div
           role="tablist"
           aria-label="Settings sections"
-          className="flex shrink-0 gap-1 border-b border-moti-line px-3 py-2"
+          className="flex shrink-0 gap-1 overflow-x-auto border-b border-moti-line px-3 py-2"
         >
           {(
             [
               { id: "course", label: "Course & Coach" },
               { id: "knowledge", label: "Knowledge" },
+              { id: "grounding", label: "Grounding Lab" },
             ] as const
           ).map((tab) => {
             const selected = activeTab === tab.id;
@@ -181,7 +209,7 @@ export function SettingsDrawer({ open, onClose }: SettingsDrawerProps) {
                 aria-selected={selected}
                 aria-controls={`settings-tabpanel-${tab.id}`}
                 onClick={() => setActiveTab(tab.id)}
-                className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
+                className={`shrink-0 whitespace-nowrap rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
                   selected
                     ? "bg-moti-navy text-white"
                     : "text-moti-navy-soft hover:bg-moti-navy/5"
@@ -194,7 +222,7 @@ export function SettingsDrawer({ open, onClose }: SettingsDrawerProps) {
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4">
-          {activeTab === "course" ? (
+          {activeTab === "course" && (
             <div
               role="tabpanel"
               id="settings-tabpanel-course"
@@ -202,7 +230,9 @@ export function SettingsDrawer({ open, onClose }: SettingsDrawerProps) {
             >
               <CourseSettingsForm />
             </div>
-          ) : (
+          )}
+
+          {activeTab === "knowledge" && (
             <div
               role="tabpanel"
               id="settings-tabpanel-knowledge"
@@ -217,9 +247,25 @@ export function SettingsDrawer({ open, onClose }: SettingsDrawerProps) {
                   device — nothing is uploaded.
                 </span>
               </p>
-              <KnowledgeDocumentList onPreview={setPreviewDocument} />
+              <KnowledgeDocumentList
+                onPreview={(doc) => setPreviewContent(documentToPreview(doc))}
+              />
               <PasteKnowledgeForm />
               <KnowledgeUploader />
+            </div>
+          )}
+
+          {activeTab === "grounding" && (
+            <div
+              role="tabpanel"
+              id="settings-tabpanel-grounding"
+              aria-labelledby="settings-tab-grounding"
+            >
+              <GroundingLab
+                onPreviewChunk={(result) =>
+                  setPreviewContent(chunkToPreview(result))
+                }
+              />
             </div>
           )}
         </div>
@@ -274,9 +320,9 @@ export function SettingsDrawer({ open, onClose }: SettingsDrawerProps) {
         </div>
       </div>
 
-      <DocumentPreviewDialog
-        doc={previewDocument}
-        onClose={() => setPreviewDocument(null)}
+      <PlainTextPreviewDialog
+        content={previewContent}
+        onClose={() => setPreviewContent(null)}
       />
     </div>
   );
