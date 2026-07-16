@@ -1,23 +1,30 @@
-import type { DemoCourse } from "@/lib/types";
-import { IconBook, IconReset, IconSettings, IconSignal } from "@/components/ui/icons";
+import { IconBook, IconSettings, IconSignal } from "@/components/ui/icons";
 import { SETTINGS_DRAWER_ID } from "@/components/settings/SettingsDrawer";
 
 interface AppHeaderProps {
-  course: DemoCourse;
+  courseTitle: string;
+  learnerLevelLabel: string;
+  descriptor: string;
   settingsOpen: boolean;
   onOpenSettings: () => void;
 }
 
-function LevelPill({ level }: { level: string }) {
+function LevelPill({ label }: { label: string }) {
   return (
     <span className="inline-flex items-center gap-1.5 rounded-full bg-moti-yellow/50 px-2.5 py-1 text-xs font-medium text-moti-navy">
       <IconSignal className="h-3.5 w-3.5" />
-      {level}
+      {label}
     </span>
   );
 }
 
-export function AppHeader({ course, settingsOpen, onOpenSettings }: AppHeaderProps) {
+export function AppHeader({
+  courseTitle,
+  learnerLevelLabel,
+  descriptor,
+  settingsOpen,
+  onOpenSettings,
+}: AppHeaderProps) {
   return (
     <header className="shrink-0 border-b border-moti-line bg-moti-surface/85 backdrop-blur">
       <div className="mx-auto flex w-full max-w-[1400px] items-center gap-3 px-3 py-2.5 sm:px-4">
@@ -34,7 +41,7 @@ export function AppHeader({ course, settingsOpen, onOpenSettings }: AppHeaderPro
               Moti AI
             </p>
             <p className="hidden truncate text-xs text-moti-navy-soft sm:block">
-              {course.descriptor}
+              {descriptor}
             </p>
           </div>
         </div>
@@ -43,21 +50,13 @@ export function AppHeader({ course, settingsOpen, onOpenSettings }: AppHeaderPro
         <div className="mx-auto hidden min-w-0 items-center gap-3 md:flex">
           <span className="flex min-w-0 items-center gap-2 text-sm text-moti-navy-soft">
             <IconBook className="h-4 w-4 shrink-0 text-moti-navy-soft" />
-            <span className="truncate font-medium text-moti-navy">{course.title}</span>
+            <span className="truncate font-medium text-moti-navy">{courseTitle}</span>
           </span>
-          <LevelPill level={course.learnerLevel} />
+          <LevelPill label={learnerLevelLabel} />
         </div>
 
         {/* Actions */}
-        <div className="ml-auto flex shrink-0 items-center gap-1.5 md:ml-0">
-          <button
-            type="button"
-            title="Reset demo (visual only in this preview)"
-            className="inline-flex items-center gap-1.5 rounded-lg border border-moti-line px-2.5 py-2 text-sm font-medium text-moti-navy-soft transition-colors hover:bg-moti-navy/5 focus-visible:bg-moti-navy/5"
-          >
-            <IconReset className="h-4 w-4" />
-            <span className="hidden sm:inline">Reset demo</span>
-          </button>
+        <div className="ml-auto flex shrink-0 items-center gap-1.5">
           <button
             type="button"
             onClick={onOpenSettings}
@@ -72,13 +71,13 @@ export function AppHeader({ course, settingsOpen, onOpenSettings }: AppHeaderPro
         </div>
       </div>
 
-      {/* Course + level on mobile (compact second row) */}
+      {/* Current course + level on mobile (compact second row) */}
       <div className="flex items-center gap-2 border-t border-moti-line px-3 py-2 md:hidden">
         <IconBook className="h-4 w-4 shrink-0 text-moti-navy-soft" />
         <span className="min-w-0 flex-1 truncate text-sm font-medium text-moti-navy">
-          {course.title}
+          {courseTitle}
         </span>
-        <LevelPill level={course.learnerLevel} />
+        <LevelPill label={learnerLevelLabel} />
       </div>
     </header>
   );

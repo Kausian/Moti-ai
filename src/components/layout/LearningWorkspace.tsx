@@ -7,19 +7,28 @@ import { AssistantPanel } from "@/components/assistant/AssistantPanel";
 import { ConversationPanel } from "@/components/chat/ConversationPanel";
 import { JourneyPanel } from "@/components/learning/JourneyPanel";
 import { SettingsDrawer } from "@/components/settings/SettingsDrawer";
+import { useCourseConfiguration } from "@/hooks/useCourseConfiguration";
+import type { LearnerLevel } from "@/lib/types";
 import {
   LOOP_STAGES,
   demoConversation,
   demoCourse,
-  knowledgeDocuments,
   learningActions,
   learningConcepts,
   reviewItems,
 } from "@/data/demo-data";
 
-// The workspace shell owns only presentational UI state: which panel is shown
-// on mobile, and whether the settings drawer is open. All content is mock data.
+const LEVEL_LABEL: Record<LearnerLevel, string> = {
+  beginner: "Beginner",
+  intermediate: "Intermediate",
+  advanced: "Advanced",
+};
+
+// The workspace shell owns presentational UI state (mobile panel + drawer). The
+// editable course title and learner level come from the configuration context;
+// the rest of the workspace still uses illustrative demo data.
 export function LearningWorkspace() {
+  const { configuration } = useCourseConfiguration();
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [activePanel, setActivePanel] = useState<WorkspacePanel>("conversation");
 
@@ -29,7 +38,9 @@ export function LearningWorkspace() {
   return (
     <div className="flex min-h-dvh flex-col overflow-x-hidden lg:h-dvh lg:overflow-hidden">
       <AppHeader
-        course={demoCourse}
+        courseTitle={configuration.courseTitle}
+        learnerLevelLabel={LEVEL_LABEL[configuration.learnerLevel]}
+        descriptor={demoCourse.descriptor}
         settingsOpen={settingsOpen}
         onOpenSettings={() => setSettingsOpen(true)}
       />
@@ -74,12 +85,7 @@ export function LearningWorkspace() {
         </div>
       </main>
 
-      <SettingsDrawer
-        open={settingsOpen}
-        onClose={() => setSettingsOpen(false)}
-        course={demoCourse}
-        documents={knowledgeDocuments}
-      />
+      <SettingsDrawer open={settingsOpen} onClose={() => setSettingsOpen(false)} />
     </div>
   );
 }

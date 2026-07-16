@@ -69,14 +69,28 @@ flowchart TD
 Server-only modules are never imported into client components. Client components
 are marked with `"use client"` deliberately.
 
-## Planned knowledge-ingestion flow
+## Knowledge-ingestion flow (implemented in Phase 3)
 
-1. The learner adds a source file (PDF, TXT, or Markdown) in the browser.
-2. Text is extracted client-side (PDF.js for PDF; direct read for TXT/Markdown).
-3. Extracted text is normalised and stored, with metadata, via the localStorage
-   persistence module as part of the configured learning knowledge.
-4. Sources are treated as **data, not instructions** — any embedded directives
-   are ignored by the server when building prompts.
+All ingestion happens **in the browser**; nothing is uploaded anywhere.
+
+1. The learner adds a source file (PDF, TXT, or Markdown) via click,
+   drag-and-drop, or keyboard — or pastes text directly.
+2. `lib/documents/file-validation` identifies the type (extension + MIME) and
+   validates size and non-emptiness against the prototype limits.
+3. Text is extracted client-side: **PDF.js** (`lib/documents/parse-pdf`, loaded
+   via dynamic `import()` with a same-origin bundled worker) for PDF; the File
+   API (`file.text()`) for TXT/Markdown.
+4. `lib/documents/normalize-text` collapses noisy whitespace while preserving
+   paragraph breaks; empty results and over-length content are rejected with
+   clear messages. Scanned/image-only PDFs yield no text and are rejected (no
+   OCR).
+5. `lib/documents/duplicates` blocks obvious duplicates (never silently
+   replacing an existing document).
+6. The resulting `KnowledgeDocument` (extracted text + safe metadata only) is
+   added to the configuration in `CourseConfigurationContext`.
+7. Sources are treated as **data, not instructions** — extracted text is
+   rendered only as plain text and, in later phases, will be passed to the model
+   as untrusted source context.
 
 ## Planned retrieval flow (prototype)
 
@@ -102,36 +116,49 @@ are marked with `"use client"` deliberately.
 
 ## Local persistence strategy
 
-- **Store:** browser `localStorage`, accessed through a single typed persistence
-  module — never read/written ad hoc across components.
-- **What is stored:** configured assistant instructions, ingested sources,
-  concept mastery status (exploring / developing / understood), and the Memory
-  Echo review queue.
-- **Shape:** namespaced, versioned keys (e.g. `moti.v1.*`) so the schema can
-  evolve safely.
-- **Scope:** per-browser only; no cross-device sync (a stated prototype limit).
+- **Store:** browser `localStorage`, accessed through a single typed module
+  (`lib/storage/course-configuration-storage.ts`) — never read/written ad hoc
+  across components.
+- **Key:** one versioned key, defined in one place:
+  `moti-ai:course-configuration:v1`.
+- **What is stored (Phase 3):** the `CourseConfiguration` — course title,
+  learner level, learning objective, assistant instructions, and knowledge
+  documents (**extracted text + safe metadata only; never File objects**).
+  Mastery status and the Memory Echo queue join later phases.
+- **Loading is hydration-safe:** the first render uses a deterministic default
+  (matching SSR); persisted data is loaded on the client after mount, avoiding
+  hydration mismatches.
+- **Validation & recovery:** parsed data is validated with type guards before
+  use; malformed or outdated data is discarded and the default sample course is
+  used instead. Write failures (quota / private mode) are caught and surfaced
+  honestly.
+- **Scope:** per-browser profile / per-device only; no cross-device sync.
 
 ## Security boundaries
 
-- **Secrets:** AI key lives only in server environment variables; never
-  `NEXT_PUBLIC_`, never in a client component or the bundle.
-- **AI traffic:** exclusively server-side via Route Handlers.
-- **Untrusted input:** uploaded source content and learner text are data. The
-  server strips/neutralises embedded "instructions" so uploads cannot hijack
-  Moti's behaviour (prompt-injection defence).
-- **Data minimisation:** learner content stays local except what is sent to the
-  AI provider to fulfil a request.
-- **Input validation:** Route Handlers validate request shape and bound context
-  size before calling the model.
+- **Local-only document processing (Phase 3):** uploaded/pasted content is
+  parsed entirely in the browser and never sent over the network. Only extracted
+  text and safe metadata are persisted — never the original binary files.
+- **Untrusted content is rendered as plain text:** extracted document text is
+  shown via React-escaped `<pre>` only. `dangerouslySetInnerHTML` is never used;
+  Markdown/HTML in documents is never interpreted, so content cannot inject
+  markup. Executable formats are rejected by type validation.
+- **No document content is logged** to the console, and sensitive material is
+  kept out of the sample course.
+- **Secrets (later phases):** the AI key lives only in server environment
+  variables; never `NEXT_PUBLIC_`, never in a client component or the bundle.
+- **AI traffic (later phases):** exclusively server-side via Route Handlers,
+  which will validate request shape, bound context size, and neutralise
+  instructions embedded in source content (prompt-injection defence).
 
 ## Planned module structure
 
 ```
-# Present structure (through Phase 2 — static workspace)
+# Present structure (through Phase 3 — knowledge configuration & ingestion)
 src/
   app/
     layout.tsx            # root layout, fonts, metadata
-    page.tsx              # renders the learning workspace shell
+    page.tsx              # CourseConfigurationProvider + workspace shell
     globals.css           # Tailwind v4 theme + brand tokens + motion
   components/
     layout/               # AppHeader, LearningWorkspace shell, MobilePanelTabs
@@ -139,12 +166,23 @@ src/
     chat/                 # ConversationPanel, ChatMessage, MotiMirrorCard,
                           #   LearningActions, MessageComposer, SourceChip
     learning/             # JourneyPanel, MemoryEcho
-    settings/             # SettingsDrawer
+    settings/             # SettingsDrawer, CourseSettingsForm, KnowledgeUploader,
+                          #   PasteKnowledgeForm, KnowledgeDocumentList/Card,
+                          #   DocumentPreviewDialog, formPrimitives
     ui/                   # icons (inline SVG), MasteryBadge
+  contexts/
+    CourseConfigurationContext.tsx  # configuration state boundary (Context)
+  hooks/
+    useCourseConfiguration.ts       # typed accessor for the context
   data/
-    demo-data.ts          # typed mock data
+    demo-data.ts          # typed mock data (conversation, journey, etc.)
+    sample-course.ts      # deterministic default course + sample document
   lib/
     types.ts              # shared TypeScript types
+    documents/            # pure ingestion: constants, file-validation,
+                          #   normalize-text, duplicates, parse-pdf,
+                          #   parse-document, errors, format, id
+    storage/              # course-configuration-storage (versioned localStorage)
 
 # Planned additions (created in the phase that first needs them)
 src/
@@ -154,7 +192,6 @@ src/
   lib/
     ai/                   # server-only Gemini client + prompt assembly
     grounding/            # source-context assembly + safety rules
-    storage/              # typed localStorage persistence module (Phase 3)
   three/                  # 3D assistant (React Three Fiber) — Phase 7
 ```
 

@@ -1,5 +1,10 @@
+import { CourseConfigurationProvider } from "@/contexts/CourseConfigurationContext";
 import { LearningWorkspace } from "@/components/layout/LearningWorkspace";
 
 export default function Home() {
-  return <LearningWorkspace />;
+  return (
+    <CourseConfigurationProvider>
+      <LearningWorkspace />
+    </CourseConfigurationProvider>
+  );
 }

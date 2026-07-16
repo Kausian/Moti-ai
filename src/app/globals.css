@@ -22,6 +22,10 @@
   --moti-developing-bg: #e8eafc;
   --moti-understood: #2f7d55;
   --moti-understood-bg: #dcf2e5;
+
+  /* Semantic feedback colours (used for validation + storage errors). */
+  --moti-danger: #b3261e;
+  --moti-danger-bg: #fbe9e7;
 }
 
 @theme inline {
@@ -40,6 +44,8 @@
   --color-moti-developing-bg: var(--moti-developing-bg);
   --color-moti-understood: var(--moti-understood);
   --color-moti-understood-bg: var(--moti-understood-bg);
+  --color-moti-danger: var(--moti-danger);
+  --color-moti-danger-bg: var(--moti-danger-bg);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }

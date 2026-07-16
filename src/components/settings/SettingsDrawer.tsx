@@ -1,77 +1,110 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import type { DemoCourse, KnowledgeDocument } from "@/lib/types";
+import type { KnowledgeDocument } from "@/lib/types";
+import { useCourseConfiguration } from "@/hooks/useCourseConfiguration";
 import {
-  IconChevron,
+  IconAlert,
+  IconCheckCircle,
   IconClose,
-  IconSource,
-  IconUpload,
+  IconInfo,
+  IconReset,
 } from "@/components/ui/icons";
+import { CourseSettingsForm } from "./CourseSettingsForm";
+import { KnowledgeDocumentList } from "./KnowledgeDocumentList";
+import { KnowledgeUploader } from "./KnowledgeUploader";
+import { PasteKnowledgeForm } from "./PasteKnowledgeForm";
+import { DocumentPreviewDialog } from "./DocumentPreviewDialog";
 
 export const SETTINGS_DRAWER_ID = "settings-drawer";
 
-const LEVELS = ["Beginner", "Intermediate", "Advanced"];
 type SettingsTab = "course" | "knowledge";
 
 interface SettingsDrawerProps {
   open: boolean;
   onClose: () => void;
-  course: DemoCourse;
-  documents: KnowledgeDocument[];
 }
 
-function Field({
-  label,
-  htmlFor,
-  hint,
-  children,
-}: {
-  label: string;
-  htmlFor: string;
-  hint?: string;
-  children: React.ReactNode;
-}) {
+function SaveStatusMessage() {
+  const { hydrated, isDirty, saveState } = useCourseConfiguration();
+
+  let icon = <IconInfo className="h-4 w-4 text-moti-navy-soft" />;
+  let text = "Saved to this browser";
+  let tone = "text-moti-navy-soft";
+
+  if (!hydrated) {
+    text = "Loading saved configuration…";
+  } else if (saveState.status === "error") {
+    icon = <IconAlert className="h-4 w-4 text-moti-danger" />;
+    text = saveState.message ?? "Couldn't save.";
+    tone = "text-moti-danger";
+  } else if (saveState.status === "saved") {
+    icon = <IconCheckCircle className="h-4 w-4 text-moti-understood" />;
+    text = saveState.message ?? "Saved locally.";
+    tone = "text-moti-understood";
+  } else if (isDirty) {
+    icon = (
+      <span
+        aria-hidden
+        className="block h-2.5 w-2.5 rounded-full bg-moti-exploring"
+      />
+    );
+    text = "Unsaved changes";
+    tone = "text-moti-exploring";
+  }
+
   return (
-    <div className="flex flex-col gap-1.5">
-      <label htmlFor={htmlFor} className="text-sm font-medium text-moti-navy">
-        {label}
-      </label>
-      {children}
-      {hint && <p className="text-xs text-moti-navy-soft">{hint}</p>}
-    </div>
+    <p
+      aria-live="polite"
+      className={`flex items-center gap-1.5 text-xs font-medium ${tone}`}
+    >
+      {icon}
+      {text}
+    </p>
   );
 }
 
-const inputClass =
-  "w-full rounded-lg border border-moti-line bg-white px-3 py-2 text-sm text-moti-navy placeholder:text-moti-navy-soft/70 focus:border-moti-navy/40 focus:outline-none";
-
-export function SettingsDrawer({
-  open,
-  onClose,
-  course,
-  documents,
-}: SettingsDrawerProps) {
+export function SettingsDrawer({ open, onClose }: SettingsDrawerProps) {
+  const { courseIsValid, resetSampleCourse, saveConfiguration } =
+    useCourseConfiguration();
   const [activeTab, setActiveTab] = useState<SettingsTab>("course");
-  const [form, setForm] = useState({
-    courseTitle: course.title,
-    learnerLevel: course.learnerLevel,
-    objective: course.objective,
-    motiInstructions: course.motiInstructions,
-    pasteContent: "",
-  });
-  const [docs, setDocs] = useState<KnowledgeDocument[]>(documents);
+  const [previewDocument, setPreviewDocument] =
+    useState<KnowledgeDocument | null>(null);
+  const [resetConfirming, setResetConfirming] = useState(false);
+
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const previouslyFocused = useRef<HTMLElement | null>(null);
+  const previewOpenRef = useRef(false);
+  const onCloseRef = useRef(onClose);
 
-  // Close on Escape, lock body scroll, and manage focus while open.
+  // Keep refs in sync via effects (not during render) so the open effect below
+  // can depend only on `open`. This is essential: `onClose` is recreated on
+  // every parent render (which happens on any configuration change), and a
+  // dependency on it would re-run the focus/scroll effect on every keystroke.
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
+
+  useEffect(() => {
+    previewOpenRef.current = previewDocument !== null;
+  }, [previewDocument]);
+
+  const handleSave = () => {
+    // Show the Course tab first if required fields are missing, so the inline
+    // validation errors are visible when they appear.
+    if (!courseIsValid) setActiveTab("course");
+    saveConfiguration();
+  };
+
+  // Escape / scroll-lock / focus management. Runs only when `open` toggles.
+  // Escape is ignored while the preview dialog is open so it closes first.
   useEffect(() => {
     if (!open) return;
     previouslyFocused.current = document.activeElement as HTMLElement | null;
     closeButtonRef.current?.focus();
 
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onClose();
+      if (event.key === "Escape" && !previewOpenRef.current) onCloseRef.current();
     };
     document.addEventListener("keydown", onKeyDown);
 
@@ -83,10 +116,7 @@ export function SettingsDrawer({
       document.body.style.overflow = overflow;
       previouslyFocused.current?.focus();
     };
-  }, [open, onClose]);
-
-  const updateField = (key: keyof typeof form, value: string) =>
-    setForm((current) => ({ ...current, [key]: value }));
+  }, [open]);
 
   return (
     <div
@@ -169,176 +199,85 @@ export function SettingsDrawer({
               role="tabpanel"
               id="settings-tabpanel-course"
               aria-labelledby="settings-tab-course"
-              className="flex flex-col gap-4"
             >
-              <Field label="Course title" htmlFor="field-course-title">
-                <input
-                  id="field-course-title"
-                  className={inputClass}
-                  value={form.courseTitle}
-                  onChange={(event) => updateField("courseTitle", event.target.value)}
-                />
-              </Field>
-
-              <Field label="Learner level" htmlFor="field-level">
-                <select
-                  id="field-level"
-                  className={inputClass}
-                  value={form.learnerLevel}
-                  onChange={(event) => updateField("learnerLevel", event.target.value)}
-                >
-                  {LEVELS.map((level) => (
-                    <option key={level} value={level}>
-                      {level}
-                    </option>
-                  ))}
-                </select>
-              </Field>
-
-              <Field
-                label="Learning objective"
-                htmlFor="field-objective"
-                hint="What the learner should be able to do by the end."
-              >
-                <textarea
-                  id="field-objective"
-                  rows={3}
-                  className={`${inputClass} resize-none`}
-                  value={form.objective}
-                  onChange={(event) => updateField("objective", event.target.value)}
-                />
-              </Field>
-
-              <Field
-                label="Moti instructions"
-                htmlFor="field-instructions"
-                hint="How Moti should coach — tone, and how much to guide vs. tell."
-              >
-                <textarea
-                  id="field-instructions"
-                  rows={4}
-                  className={`${inputClass} resize-none`}
-                  value={form.motiInstructions}
-                  onChange={(event) =>
-                    updateField("motiInstructions", event.target.value)
-                  }
-                />
-              </Field>
+              <CourseSettingsForm />
             </div>
           ) : (
             <div
               role="tabpanel"
               id="settings-tabpanel-knowledge"
               aria-labelledby="settings-tab-knowledge"
-              className="flex flex-col gap-4"
+              className="flex flex-col gap-5"
             >
-              <div>
-                <p className="mb-1.5 text-sm font-medium text-moti-navy">
-                  Knowledge documents
-                </p>
-                <ul className="flex flex-col gap-1.5">
-                  {docs.map((document) => (
-                    <li
-                      key={document.id}
-                      className="flex items-center gap-2.5 rounded-lg border border-moti-line bg-white px-3 py-2"
-                    >
-                      <IconSource className="h-4 w-4 shrink-0 text-moti-navy-soft" />
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-medium text-moti-navy">
-                          {document.name}
-                        </p>
-                        <p className="text-xs text-moti-navy-soft">
-                          {document.kind} · {document.meta}
-                        </p>
-                      </div>
-                      <button
-                        type="button"
-                        aria-label={`Remove ${document.name}`}
-                        onClick={() =>
-                          setDocs((current) =>
-                            current.filter((item) => item.id !== document.id),
-                          )
-                        }
-                        className="grid h-7 w-7 shrink-0 place-items-center rounded-md text-moti-navy-soft transition-colors hover:bg-moti-navy/5 focus-visible:bg-moti-navy/5"
-                      >
-                        <IconClose className="h-4 w-4" />
-                      </button>
-                    </li>
-                  ))}
-                  {docs.length === 0 && (
-                    <li className="rounded-lg border border-dashed border-moti-line px-3 py-2 text-xs text-moti-navy-soft">
-                      No documents. Add material below.
-                    </li>
-                  )}
-                </ul>
-              </div>
-
-              <Field
-                label="Paste learning content"
-                htmlFor="field-paste"
-                hint="Paste text Moti should learn from."
-              >
-                <textarea
-                  id="field-paste"
-                  rows={4}
-                  className={`${inputClass} resize-none`}
-                  placeholder="Paste notes, an article, or course text…"
-                  value={form.pasteContent}
-                  onChange={(event) => updateField("pasteContent", event.target.value)}
-                />
-              </Field>
-
-              <div>
-                <p className="mb-1.5 text-sm font-medium text-moti-navy">
-                  Upload documents
-                </p>
-                <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed border-moti-line bg-moti-navy/[0.02] px-4 py-6 text-center">
-                  <span className="grid h-10 w-10 place-items-center rounded-full bg-moti-navy/5 text-moti-navy-soft">
-                    <IconUpload className="h-5 w-5" />
-                  </span>
-                  <p className="text-sm font-medium text-moti-navy">
-                    Drag and drop, or browse
-                  </p>
-                  <p className="text-xs text-moti-navy-soft">
-                    Planned support for PDF, TXT and Markdown.
-                  </p>
-                  <button
-                    type="button"
-                    disabled
-                    className="mt-1 cursor-not-allowed rounded-lg border border-moti-line px-3 py-1.5 text-sm font-medium text-moti-navy-soft opacity-60"
-                  >
-                    Browse files
-                  </button>
-                  <p className="text-[11px] text-moti-navy-soft">
-                    File handling arrives in a later phase.
-                  </p>
-                </div>
-              </div>
+              <p className="flex items-start gap-2 rounded-lg border border-moti-line bg-moti-navy/[0.03] px-3 py-2 text-xs leading-5 text-moti-navy-soft">
+                <IconInfo className="mt-0.5 h-4 w-4 shrink-0" />
+                <span>
+                  Documents are processed in your browser for this prototype.
+                  Saved configuration stays in this browser profile on this
+                  device — nothing is uploaded.
+                </span>
+              </p>
+              <KnowledgeDocumentList onPreview={setPreviewDocument} />
+              <PasteKnowledgeForm />
+              <KnowledgeUploader />
             </div>
           )}
         </div>
 
         <div className="shrink-0 border-t border-moti-line px-4 py-3">
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              className="inline-flex items-center gap-1.5 rounded-lg border border-moti-line px-3 py-2 text-sm font-medium text-moti-navy-soft transition-colors hover:bg-moti-navy/5 focus-visible:bg-moti-navy/5"
-            >
-              <IconChevron className="h-4 w-4 rotate-90" />
-              Reset sample course
-            </button>
-            <button
-              type="button"
-              className="ml-auto inline-flex items-center rounded-lg bg-moti-navy px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-moti-navy/90 focus-visible:bg-moti-navy/90"
-            >
-              Save configuration
-            </button>
+          {resetConfirming ? (
+            <div className="flex flex-wrap items-center gap-2 rounded-lg bg-moti-danger-bg px-3 py-2">
+              <p className="mr-auto text-xs font-medium text-moti-danger">
+                Reset to the sample course? Uploaded and pasted documents will be
+                removed.
+              </p>
+              <button
+                type="button"
+                onClick={() => setResetConfirming(false)}
+                className="rounded-md border border-moti-line bg-white px-2.5 py-1 text-xs font-medium text-moti-navy-soft transition-colors hover:bg-moti-navy/5"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  resetSampleCourse();
+                  setResetConfirming(false);
+                }}
+                className="rounded-md bg-moti-danger px-2.5 py-1 text-xs font-medium text-white transition-colors hover:opacity-90"
+              >
+                Reset
+              </button>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setResetConfirming(true)}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-moti-line px-3 py-2 text-sm font-medium text-moti-navy-soft transition-colors hover:bg-moti-navy/5 focus-visible:bg-moti-navy/5"
+              >
+                <IconReset className="h-4 w-4" />
+                Reset sample course
+              </button>
+              <button
+                type="button"
+                onClick={handleSave}
+                className="ml-auto inline-flex items-center rounded-lg bg-moti-navy px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-moti-navy/90 focus-visible:bg-moti-navy/90"
+              >
+                Save configuration
+              </button>
+            </div>
+          )}
+          <div className="mt-2">
+            <SaveStatusMessage />
           </div>
-          <p className="mt-2 text-[11px] text-moti-navy-soft">
-            Saving and reset are visual in this preview — no data is stored yet.
-          </p>
         </div>
       </div>
+
+      <DocumentPreviewDialog
+        doc={previewDocument}
+        onClose={() => setPreviewDocument(null)}
+      />
     </div>
   );
 }

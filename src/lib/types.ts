@@ -1,6 +1,6 @@
-// Shared TypeScript types for Moti AI's static learning workspace (Phase 2).
-// These model the product concepts the interface displays. All values are
-// currently supplied as typed mock data; no runtime persistence or AI yet.
+// Shared TypeScript types for Moti AI.
+// Phase 2 introduced the static workspace types; Phase 3 adds the configurable
+// course + knowledge-document models that are persisted in the browser.
 
 export type AssistantStatus =
   | "Ready"
@@ -66,13 +66,6 @@ export interface ReviewItem {
   timing: ReviewTiming;
 }
 
-export interface KnowledgeDocument {
-  id: string;
-  name: string;
-  kind: "PDF" | "TXT" | "Markdown";
-  meta: string;
-}
-
 /** A quick learning action offered near the composer. */
 export interface LearningAction {
   id: string;
@@ -80,14 +73,49 @@ export interface LearningAction {
   hint: string;
 }
 
-/** The configured course/session Moti is coaching. */
+/** Visual-only fields that drive the assistant panel and conversation shell. */
 export interface DemoCourse {
-  title: string;
   descriptor: string;
-  learnerLevel: string;
-  objective: string;
-  motiInstructions: string;
   currentConcept: string;
   assistantStatus: AssistantStatus;
   currentStage: LoopStage;
+}
+
+// ---------------------------------------------------------------------------
+// Phase 3 — configurable course + knowledge documents (persisted locally)
+// ---------------------------------------------------------------------------
+
+export type LearnerLevel = "beginner" | "intermediate" | "advanced";
+
+/** Where a knowledge document came from. */
+export type KnowledgeDocumentSource = "sample" | "upload" | "pasted";
+
+/** Classification of a document's original format. */
+export type SupportedDocumentType = "pdf" | "txt" | "markdown" | "plain-text";
+
+/**
+ * A single piece of learning material. Only extracted text and safe metadata
+ * are ever stored — never the original binary File.
+ */
+export interface KnowledgeDocument {
+  id: string;
+  title: string;
+  originalFileName?: string;
+  source: KnowledgeDocumentSource;
+  documentType: SupportedDocumentType;
+  mimeType?: string;
+  sizeBytes?: number;
+  characterCount: number;
+  content: string;
+  /** ISO 8601 timestamp. */
+  addedAt: string;
+}
+
+/** The full, persistable course configuration. */
+export interface CourseConfiguration {
+  courseTitle: string;
+  learnerLevel: LearnerLevel;
+  learningObjective: string;
+  assistantInstructions: string;
+  documents: KnowledgeDocument[];
 }

@@ -74,28 +74,51 @@ static prototype; every non-working feature is clearly labelled.
 
 ---
 
-## Phase 3 — Knowledge ingestion & configuration
+## Phase 3 — Knowledge ingestion & configuration _(complete)_
 
-**Goal:** let a user configure assistant instructions and add learning material.
+**Goal:** let a user configure the course and add learning material, persisted
+locally in the browser.
 
-**Deliverables**
-- Assistant-instructions configuration UI + persistence.
-- Source upload for PDF, TXT, Markdown with client-side text extraction.
-- Typed localStorage persistence module (`lib/storage`) with versioned keys.
-- Basic "learning knowledge" management view (list / remove sources).
+**Deliverables (built)**
+- Editable course configuration (title, learner level, objective, Moti
+  instructions) with inline validation.
+- Client-side document ingestion for **PDF, TXT, Markdown** — upload (click,
+  drag-and-drop, keyboard) and paste — with validation, whitespace
+  normalization, duplicate detection, and clear per-file success/error states.
+- PDF text extraction via **PDF.js**, dynamically imported with a same-origin
+  bundled worker; scanned/image-only PDFs rejected (no OCR).
+- Knowledge management: document list with metadata, accessible plain-text
+  preview dialog, and per-document removal (with confirmation + focus care).
+- Typed, versioned `localStorage` persistence (`lib/storage`) with shape
+  validation, safe fallback, save/reset, and saved/unsaved/saving/error states.
+- Configuration state boundary (`CourseConfigurationContext` + hook); pure,
+  React-free document utilities (`lib/documents`).
 
-**New dependencies:** PDF.js (introduced here).
+**New dependencies:** `pdfjs-dist` (only). Zero runtime sub-dependencies; used
+client-side for PDF text extraction.
 
 **Dependencies:** Phase 2 (workspace shell to wire ingestion into).
 
-**Risks:** PDF extraction edge cases; large files in the browser; localStorage
-size limits.
+**Risks (addressed):** PDF extraction edge cases; hydration mismatch from
+browser-only storage; localStorage failures. Scanned PDFs, malformed storage,
+and write failures are all handled with clear messaging.
 
-**Validation:** upload each supported type; text extracted and persisted;
-survives reload; lint + build clean.
+**Prototype limits:** 5 documents; 5 MB per file; 500,000 characters per
+document; 1,000,000 characters total across all active documents (the sample
+course counts toward the total).
 
-**Definition of done:** a user can configure Moti and add sources that persist;
-sources are stored via the single persistence module.
+**Validation:** each supported type extracted and persisted; unsupported /
+oversized / empty / image-only inputs rejected clearly; per-document and total
+character limits enforced with a clear "characters remaining" message; survives
+reload; malformed storage falls back safely; reset restores the sample; no
+`any`, no `dangerouslySetInnerHTML`, no network egress of content; lint + build
+clean.
+
+**Definition of done:** a user can configure Moti, add/preview/remove sources,
+save, and reload with the configuration retained — all in the browser.
+
+**Not in this phase:** documents are stored but **not yet used to answer
+questions**; grounded AI arrives in Phase 4.
 
 ---
 

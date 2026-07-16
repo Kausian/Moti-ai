@@ -5,7 +5,6 @@
 import type {
   ChatMessage,
   DemoCourse,
-  KnowledgeDocument,
   LearningAction,
   LearningConcept,
   LoopStage,
@@ -21,13 +20,7 @@ export const LOOP_STAGES: LoopStage[] = [
 ];
 
 export const demoCourse: DemoCourse = {
-  title: "Responsible AI and Prompt Engineering Fundamentals",
   descriptor: "Your source-grounded learning coach",
-  learnerLevel: "Beginner",
-  objective:
-    "Understand how large language models can mislead, and learn to prompt them responsibly.",
-  motiInstructions:
-    "Be warm and encouraging. Never just give the answer — ask the learner to think and explain first, then correct gently using only the supplied sources.",
   currentConcept: "AI Hallucinations",
   assistantStatus: "Explaining",
   currentStage: "Correct",
@@ -137,23 +130,3 @@ export const reviewItems: ReviewItem[] = [
   },
 ];
 
-export const knowledgeDocuments: KnowledgeDocument[] = [
-  {
-    id: "doc-rai-guide",
-    name: "Responsible AI Guide.pdf",
-    kind: "PDF",
-    meta: "Sample source · 14 sections",
-  },
-  {
-    id: "doc-prompt-basics",
-    name: "Prompt Engineering Basics.md",
-    kind: "Markdown",
-    meta: "Sample source · 6 sections",
-  },
-  {
-    id: "doc-glossary",
-    name: "AI Safety Glossary.txt",
-    kind: "TXT",
-    meta: "Sample source · 42 terms",
-  },
-];

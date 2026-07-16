@@ -39,29 +39,56 @@ remember through spaced review — with a friendly animated 3D assistant alongsi
 
 ## Development status
 
-**Phase 2 — Static learning workspace & design system (current).** The app now
-renders the full responsive learning workspace as a polished, static interface
-driven entirely by typed mock data.
+**Phase 3 — Local knowledge configuration & document ingestion (current).** The
+settings drawer is now genuinely functional: you can configure the course, add
+learning material, and everything persists locally in your browser.
 
 What works in this phase:
 
-- Responsive three-panel workspace — assistant, learning conversation, and
-  Mastery Journey — that collapses cleanly to tablet and mobile layouts.
-- A branded design system (warm gradient palette, navy typography, reusable
-  mastery-status badges, inline SVG icons, subtle motion).
-- An open/close **Knowledge & settings** drawer with tabs, form fields, Escape
-  and backdrop close, focus handling, and body-scroll lock.
-- Mobile panel switching, a message composer with live character count and a
-  disabled send state, and a static Moti Mirror teach-back example.
+- **Editable course configuration** — course title, learner level, learning
+  objective, and Moti's instructions, with inline validation.
+- **Document ingestion, entirely in the browser** — upload **PDF, TXT, and
+  Markdown** (click, drag-and-drop, or keyboard), or paste text directly. Text
+  is extracted, normalized, validated, and de-duplicated.
+- **Knowledge management** — list documents with metadata, preview extracted
+  text in an accessible dialog, and remove individual documents.
+- **Local persistence** — save the configuration to `localStorage` under a
+  versioned key; it survives a browser reload. Clear saved / unsaved / saving /
+  saved / error states.
+- **Reset sample course** — restore the original sample course and document.
 
-Intentionally **not** connected yet (visually honest placeholders only):
+### How your documents are handled
 
-- No AI, no Gemini calls, no retrieval — all conversation content is mock data.
-- No real file upload or PDF/TXT/Markdown parsing; the drop zone is illustrative.
-- No persistence (no localStorage/database); edits in the settings drawer are
-  in-memory only.
-- The 3D assistant is a styled placeholder; React Three Fiber / Three.js arrive
+- **Everything is processed in your browser.** Documents are never uploaded to a
+  server or any external service. PDF text is extracted client-side with
+  [PDF.js](https://mozilla.github.io/pdf.js/).
+- **Only extracted text and safe metadata are stored** — never the original
+  files. Saved data lives in `localStorage`, local to **this browser profile on
+  this device**.
+- Extracted content is always rendered as **plain text** (never as HTML/Markdown
+  and never with `dangerouslySetInnerHTML`), so document content cannot inject
+  markup.
+
+### Prototype limits (Moti AI safeguards, not browser limits)
+
+- Up to **5 documents**, **5 MB per file**, **500,000 characters per document**,
+  and **1,000,000 characters total** across all active documents (the sample
+  course counts toward this total).
+
+### Known limitations
+
+- **No OCR.** Scanned or image-only PDFs contain no extractable text and are
+  rejected with a clear message — try a text-based PDF or paste the text.
+- Persistence is per-browser/per-device only; there is no cloud sync.
+
+### Not connected yet (honest placeholders)
+
+- **No AI, no Gemini, no retrieval.** Uploaded documents are stored and
+  previewable but are **not yet used to answer questions** — the conversation
+  panel still shows an illustrative Moti Mirror example. Grounded answers arrive
   in a later phase.
+- The 3D assistant remains a styled placeholder (React Three Fiber / Three.js
+  come later).
 
 See [`docs/development-plan.md`](docs/development-plan.md) for the full phase plan.
 
@@ -82,8 +109,9 @@ npm run build
 ### Environment
 
 Copy `.env.example` to `.env.local` and fill in real values when AI features are
-added (Phase 3). The AI key is **server-only** and must never be committed or
-exposed to the browser.
+added (a later phase). Phase 3 needs no environment variables — all document
+processing and persistence happen in the browser. The future AI key is
+**server-only** and must never be committed or exposed to the browser.
 
 ## Documentation
 
