@@ -39,11 +39,50 @@ remember through spaced review — with a friendly animated 3D assistant alongsi
 
 ## Development status
 
-**Phase 6 — interactive 3D Moti assistant (current).** The static placeholder is
-replaced by a lightweight, **procedurally modelled** 3D Moti (React Three Fiber +
-Three.js) that reacts to real conversation state.
+**Phase 7 — Moti Mirror teach-back (current).** The learning loop is now real:
+**Think → Explain → Correct → Remember**. Pick a grounded answer, choose
+**"Teach it back"**, explain the concept in your own words, and Moti coaches your
+explanation against *only* that answer's sources.
 
 What works in this phase:
+
+- **A real teach-back activity** — inline, anchored to the answer it belongs to.
+  Moti asks you to explain the concept; you write it in your own words.
+- **Structured, source-grounded coaching** — what you understood, what is missing,
+  misconceptions (your idea paraphrased + the correction), a clearer explanation,
+  a mastery recommendation with its rationale, the supporting sources, a
+  recommended next action, and one Memory Echo recall prompt.
+- **A documented rubric** — exploring / developing / understood / not-evaluated.
+  Moti judges **conceptual understanding only**: spelling, grammar, style, and
+  length are explicitly not criteria, so a short accurate explanation can be
+  *understood* and a long fluent but wrong one is not.
+- **A separate `POST /api/teach-back`** — its own request, rubric prompt, schema,
+  and validation. It sends **no conversation history** and requires **at least one
+  validated source**, so an explanation is never evaluated ungrounded.
+- **Honest boundaries** — the recommendation is labelled *"a prototype learning
+  recommendation [that] has not yet changed your Mastery Journey"*, and the recall
+  prompt is labelled *"not scheduled or saved yet"*. Neither the Mastery Journey
+  nor the Memory Echo queue is mutated.
+- **Real failure handling** — categorised errors with **Retry** that preserves your
+  explanation, **Cancel** for an in-flight evaluation, and never a fabricated
+  feedback card.
+- **The loop drives the UI** — the AssistantPanel's stage and current concept
+  follow the real activity, and 3D Moti reacts (thinking while evaluating,
+  explaining on feedback, error on failure, listening while you write).
+- **Automated tests** (Vitest, **190 total**) — request validation, prompt layering
+  and injection containment, response validation and per-mode consistency, the
+  activity state machine, and avatar-state combination. **No test calls the real API.**
+
+> Limitations: the mastery result is a **recommendation only** — it is not a formal
+> or certified assessment, produces no scores or percentages, and changes no
+> tracked state. Teach-back results are in-memory only. Adaptive challenges are
+> Phase 8; applying mastery and scheduling review are Phase 9.
+
+<details>
+<summary><strong>Phase 6 — interactive 3D Moti assistant (complete)</strong></summary>
+
+The static placeholder is replaced by a lightweight, **procedurally modelled** 3D
+Moti (React Three Fiber + Three.js) that reacts to real conversation state.
 
 - **A polished 3D character** built entirely from Three.js primitives — **no
   external model, texture, image, or animation asset** is loaded.
@@ -104,6 +143,7 @@ What works in this phase:
   and the fully-local Grounding Lab) still works.
 
 </details>
+</details>
 
 ### AI configuration
 
@@ -119,13 +159,16 @@ What works in this phase:
   runs without it; the conversation reports *"AI conversation is not configured"*
   until one is set.
 
-### Privacy boundary (changed in Phase 5)
+### Privacy boundary (changed in Phase 5, extended in Phase 7)
 
 Phases 3–4 were fully local. Now, **when you send a message**, your question,
 recent conversation, and up to four relevant source excerpts are sent to the
-configured Gemini API. Your full document collection is **not** sent, documents
-stay in this browser, and the conversation is not persisted by Moti AI.
-Provider-side handling follows the configured Gemini account and terms.
+configured Gemini API. **When you teach a concept back**, the concept, your
+explanation, your course configuration, and that answer's source excerpts (≤4) are
+sent — **without** your conversation history. Your full document collection is
+**never** sent, documents stay in this browser, and neither the conversation nor
+your teach-back feedback is persisted by Moti AI. Provider-side handling follows
+the configured Gemini account and terms.
 
 ### Grounding & prompt-injection defence
 
@@ -139,18 +182,22 @@ Provider-side handling follows the configured Gemini account and terms.
 
 ### Prototype limits & security notes
 
-- Request caps: message **300 chars**, history **6 items**, sources **4** (≤1,500
-  chars each, ≤6,000 total). Server timeout **45s**.
-- The `POST /api/chat` endpoint is public and unauthenticated; a production
-  deployment would need server-side rate limiting and auth. No third-party
-  rate-limiter is added in this phase.
+- Chat request caps: message **300 chars**, history **6 items**, sources **4**
+  (≤1,500 chars each, ≤6,000 total). Server timeout **45s**.
+- Teach-back caps: concept **150 chars**, explanation **15–1,200 chars**, sources
+  **1–4** (same size caps, and **no** history). Same **45s** timeout.
+- The `POST /api/chat` and `POST /api/teach-back` endpoints are public and
+  unauthenticated; a production deployment would need server-side rate limiting and
+  auth. No third-party rate-limiter is added in this phase.
 
 ### Not connected yet (later phases)
 
-- **No** Moti Mirror teach-back evaluation, quizzes, mastery updates, or Memory
-  Echo scheduling. The 3D Moti assistant is **live** (Phase 6) but its
-  `celebrating` state is not yet triggered by app behaviour, and the concept it
-  shows is a static label. Conversation history is **not** persisted across reloads.
+- **No** quizzes or adaptive challenges (Phase 8) — so Moti's `celebrating` state
+  is still not triggered by app behaviour.
+- **No** Mastery Journey updates and **no** Memory Echo scheduling (Phase 9). Moti
+  Mirror produces a mastery *recommendation* and a recall *preview* only; neither
+  changes tracked state.
+- Conversation history and teach-back results are **not** persisted across reloads.
 
 See [`docs/development-plan.md`](docs/development-plan.md) for the full phase plan.
 

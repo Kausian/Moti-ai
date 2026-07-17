@@ -6,6 +6,9 @@ import type {
   ApiStatus,
   UseMotiConversationResult,
 } from "@/hooks/useMotiConversation";
+import type { UseMotiMirrorResult } from "@/hooks/useMotiMirror";
+import { deriveConceptTitle } from "@/lib/mirror/eligibility";
+import { MotiMirrorActivity } from "@/components/mirror/MotiMirrorActivity";
 import {
   PlainTextPreviewDialog,
   type PreviewContent,
@@ -38,12 +41,15 @@ function sourceToPreview(source: ConversationSource): PreviewContent {
 interface ConversationPanelProps {
   /** The shared conversation state, owned by the workspace so Moti can react to it. */
   conversation: UseMotiConversationResult;
+  /** The shared Moti Mirror activity, owned by the workspace (drives the loop + avatar). */
+  mirror: UseMotiMirrorResult;
   /** Reports whether the learner is actively composing (drives Moti's listening state). */
   onComposerActiveChange?: (active: boolean) => void;
 }
 
 export function ConversationPanel({
   conversation,
+  mirror,
   onComposerActiveChange,
 }: ConversationPanelProps) {
   const {
@@ -132,15 +138,46 @@ export function ConversationPanel({
           </div>
         ) : (
           messages.map((message) => (
-            <ChatMessageItem
-              key={message.id}
-              message={message}
-              disabled={isPending}
-              onExplainSimply={explainSimply}
-              onGiveExample={giveExample}
-              onAskFollowUp={() => composerRef.current?.focus()}
-              onPreviewSource={(source) => setPreview(sourceToPreview(source))}
-            />
+            <div key={message.id} className="space-y-3">
+              <ChatMessageItem
+                message={message}
+                disabled={isPending}
+                teachBackOpen={mirror.state?.messageId === message.id}
+                teachBackBlocked={
+                  mirror.state !== null && mirror.state.messageId !== message.id
+                }
+                onExplainSimply={explainSimply}
+                onGiveExample={giveExample}
+                onAskFollowUp={() => composerRef.current?.focus()}
+                onTeachBack={() => {
+                  const sources = message.sources ?? [];
+                  const conceptTitle = deriveConceptTitle(sources);
+                  if (!conceptTitle) return;
+                  mirror.open({ messageId: message.id, conceptTitle, sources });
+                }}
+                onPreviewSource={(source) => setPreview(sourceToPreview(source))}
+              />
+
+              {/* The activity is inline, anchored to the answer it teaches back. */}
+              {mirror.state?.messageId === message.id && (
+                <MotiMirrorActivity
+                  activity={mirror.state}
+                  stage={mirror.stage}
+                  onExplanationChange={mirror.setExplanation}
+                  onFocusChange={mirror.setComposerFocused}
+                  onSubmit={mirror.submit}
+                  onRetry={mirror.retry}
+                  onCancelRequest={mirror.cancel}
+                  onEdit={mirror.edit}
+                  onGiveExample={() => {
+                    mirror.close();
+                    giveExample();
+                  }}
+                  onClose={mirror.close}
+                  onPreviewSource={(source) => setPreview(sourceToPreview(source))}
+                />
+              )}
+            </div>
           ))
         )}
       </div>
@@ -174,6 +211,14 @@ export function ConversationPanel({
           confirmConsent();
           composerRef.current?.clear();
         }}
+      />
+
+      {/* Moti Mirror reuses the same session acknowledgement and dialog — it is
+          only reached when the learner has not yet accepted in this session. */}
+      <AiConsentDialog
+        open={mirror.consentOpen}
+        onCancel={mirror.cancelConsent}
+        onContinue={mirror.confirmConsent}
       />
 
       <PlainTextPreviewDialog content={preview} onClose={() => setPreview(null)} />

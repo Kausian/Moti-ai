@@ -288,6 +288,8 @@ export type ConversationMessageStatus = "complete" | "sending" | "failed";
 /** A source attached to a completed answer, shown as a chip / preview. */
 export interface ConversationSource {
   id: string;
+  /** Retained so a teach-back (Phase 7) can re-send the exact source metadata. */
+  documentId: string;
   documentTitle: string;
   sectionHeading?: string;
   content: string;
@@ -305,4 +307,83 @@ export interface ConversationMessage {
   responseMode?: MotiResponseMode;
   sources?: ConversationSource[];
   suggestedActions?: SuggestedLearningAction[];
+}
+
+// ---------------------------------------------------------------------------
+// Phase 7 — Moti Mirror teach-back (POST /api/teach-back)
+//
+// Deliberately separate from the chat contract above: teach-back has its own
+// request, prompt, schema, and validation rules. Normal conversation history is
+// never part of a teach-back request — the explanation is evaluated on its own
+// against the selected answer's validated sources.
+// ---------------------------------------------------------------------------
+
+/** The four stages of the Moti Learning Loop, as an activity progresses. */
+export type MotiLearningLoopStage = "think" | "explain" | "correct" | "remember";
+
+/** A validated source excerpt attached to the answer being taught back. */
+export interface TeachBackSourceInput {
+  chunkId: string;
+  documentId: string;
+  documentTitle: string;
+  sectionHeading?: string;
+  chunkIndex: number;
+  content: string;
+}
+
+/** The request the browser POSTs to /api/teach-back. All fields are untrusted. */
+export interface MotiMirrorRequest {
+  conceptTitle: string;
+  learnerExplanation: string;
+  course: {
+    title: string;
+    learnerLevel: LearnerLevel;
+    learningObjective: string;
+    assistantInstructions: string;
+  };
+  sources: TeachBackSourceInput[];
+}
+
+export type MotiMirrorResponseMode =
+  | "teach-back-feedback"
+  | "insufficient-knowledge"
+  | "blocked";
+
+/**
+ * A prototype learning recommendation — never a formal educational assessment,
+ * and never applied to the Mastery Journey in this phase.
+ */
+export type MotiMirrorMasteryRecommendation =
+  | "not-evaluated"
+  | "exploring"
+  | "developing"
+  | "understood";
+
+export type MotiMirrorNextAction =
+  | "retry-teach-back"
+  | "review-explanation"
+  | "give-example"
+  | "continue-learning";
+
+export interface MotiMirrorMisconception {
+  /** The learner's idea, paraphrased — never a fabricated quote. */
+  learnerIdea: string;
+  correction: string;
+}
+
+/** The structured JSON Moti Mirror must return (validated at runtime). */
+export interface MotiMirrorStructuredResponse {
+  responseMode: MotiMirrorResponseMode;
+  conceptTitle: string;
+  knowledgeSufficient: boolean;
+  feedbackSummary: string;
+  correctUnderstanding: string[];
+  missingPoints: string[];
+  misconceptions: MotiMirrorMisconception[];
+  improvedExplanation: string;
+  masteryRecommendation: MotiMirrorMasteryRecommendation;
+  masteryRationale: string;
+  usedSourceIds: string[];
+  nextAction: MotiMirrorNextAction;
+  memoryEchoPrompt?: string;
 }

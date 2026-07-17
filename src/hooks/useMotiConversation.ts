@@ -18,8 +18,7 @@ import {
   selectUsedSources,
   toChatSources,
 } from "@/lib/chat/conversation-history";
-
-const SESSION_CONSENT_KEY = "moti-ai:ai-consent:session";
+import { hasSessionConsent, setSessionConsent } from "@/lib/chat/ai-consent";
 
 const LEVEL_LABEL: Record<LearnerLevel, string> = {
   beginner: "beginner",
@@ -59,24 +58,6 @@ function newId(): string {
     return crypto.randomUUID();
   }
   return `msg_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
-}
-
-function hasSessionConsent(): boolean {
-  if (typeof window === "undefined") return false;
-  try {
-    return window.sessionStorage.getItem(SESSION_CONSENT_KEY) === "true";
-  } catch {
-    return false;
-  }
-}
-
-function setSessionConsent(): void {
-  if (typeof window === "undefined") return;
-  try {
-    window.sessionStorage.setItem(SESSION_CONSENT_KEY, "true");
-  } catch {
-    // Session storage may be unavailable (private mode); consent then re-prompts.
-  }
 }
 
 interface PendingTurn {

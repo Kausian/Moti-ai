@@ -6,6 +6,7 @@ import type {
   MotiResponseMode,
 } from "@/lib/types";
 import { IconSource, IconSparkles } from "@/components/ui/icons";
+import { isTeachBackEligible } from "@/lib/mirror/eligibility";
 import { LearningActions } from "./LearningActions";
 
 const MODE_LABEL: Record<MotiResponseMode, string> = {
@@ -18,9 +19,14 @@ const MODE_LABEL: Record<MotiResponseMode, string> = {
 interface ChatMessageItemProps {
   message: ConversationMessage;
   disabled: boolean;
+  /** True when this answer's Moti Mirror activity is already open. */
+  teachBackOpen: boolean;
+  /** True when another answer's activity is open — only one may be active. */
+  teachBackBlocked: boolean;
   onExplainSimply: () => void;
   onGiveExample: () => void;
   onAskFollowUp: () => void;
+  onTeachBack: () => void;
   onPreviewSource: (source: ConversationSource) => void;
 }
 
@@ -42,9 +48,12 @@ function TypingIndicator() {
 export function ChatMessageItem({
   message,
   disabled,
+  teachBackOpen,
+  teachBackBlocked,
   onExplainSimply,
   onGiveExample,
   onAskFollowUp,
+  onTeachBack,
   onPreviewSource,
 }: ChatMessageItemProps) {
   if (message.role === "user") {
@@ -59,6 +68,9 @@ export function ChatMessageItem({
 
   const isSending = message.status === "sending";
   const sources = message.sources ?? [];
+  // Teach-back needs a completed, grounded answer with at least one validated
+  // source — never a pending, failed, unsourced, or non-grounded response.
+  const canTeachBack = isTeachBackEligible(message);
 
   return (
     <div className="flex gap-2.5">
@@ -110,17 +122,21 @@ export function ChatMessageItem({
           </div>
         )}
 
-        {!isSending && message.suggestedActions && (
+        {!isSending && (message.suggestedActions || canTeachBack) && (
           <LearningActions
-            actions={message.suggestedActions}
+            actions={message.suggestedActions ?? []}
             hasSources={sources.length > 0}
             disabled={disabled}
+            canTeachBack={canTeachBack}
+            teachBackOpen={teachBackOpen}
+            teachBackBlocked={teachBackBlocked}
             onExplainSimply={onExplainSimply}
             onGiveExample={onGiveExample}
             onShowSource={() => {
               if (sources.length > 0) onPreviewSource(sources[0]);
             }}
             onAskFollowUp={onAskFollowUp}
+            onTeachBack={onTeachBack}
           />
         )}
       </div>

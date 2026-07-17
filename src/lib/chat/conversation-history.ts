@@ -59,6 +59,7 @@ export function selectUsedSources(
     seen.add(id);
     selected.push({
       id: source.chunkId,
+      documentId: source.documentId,
       documentTitle: source.documentTitle,
       sectionHeading: source.sectionHeading,
       content: source.content,

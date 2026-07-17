@@ -103,6 +103,16 @@ away from them without an explicit decision recorded here.
   real Gemini API for this project; `gemini-3.5-flash` returned HTTP 503 for this
   project during testing). The **`GEMINI_API_KEY`** is server-only: never
   `NEXT_PUBLIC_`, never in a client component or the bundle.
+- **Moti Mirror teach-back (Phase 7)** runs through its **own** Route Handler,
+  **`src/app/api/teach-back/route.ts`**, with its own contract in `src/lib/mirror/`
+  (validation, layered rubric prompt, `responseSchema`, runtime validation). Do
+  **not** add a mode flag to `/api/chat`. Teach-back sends **no conversation
+  history** and requires **≥1 validated source** — never evaluate ungrounded. It
+  reuses the existing Gemini client, model, timeout, and `lib/ai/error-mapping.ts`
+  categories. The mastery result is a **recommendation only**: it must not mutate
+  the Mastery Journey, and the Memory Echo prompt must not be scheduled or
+  persisted (both are Phase 9). Moti Mirror state must never enter
+  `ConversationMessage[]`.
 - **`three` 0.185.1 + `@react-three/fiber` 9.6.1** (runtime) with **`@types/three`
   0.185.1** (dev) — the 3D Moti assistant (Phase 6). `@react-three/fiber` 9 targets
   **React 19** (peer `react >=19 <19.3`). The scene is **client-only**: one

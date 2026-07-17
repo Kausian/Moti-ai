@@ -42,6 +42,65 @@ export function mapConversationToVisualState(
   return "idle";
 }
 
+// ---------------------------------------------------------------------------
+// Phase 7 — combining chat and Moti Mirror teach-back signals
+// ---------------------------------------------------------------------------
+
+/** Grounded signals from the normal conversation. */
+export interface ChatAvatarSignals {
+  requestPending: boolean;
+  hasError: boolean;
+  composing: boolean;
+  /** Completed assistant answers; an increase opens the explaining window. */
+  answerCount: number;
+  hasMessages: boolean;
+}
+
+/** Grounded signals from the Moti Mirror activity. */
+export interface TeachBackAvatarSignals {
+  /** False when no activity is open — teach-back then contributes nothing. */
+  active: boolean;
+  pending: boolean;
+  hasError: boolean;
+  /** Completed teach-back evaluations; an increase opens the explaining window. */
+  feedbackCount: number;
+  /** The learner is drafting their explanation. */
+  composing: boolean;
+}
+
+/** The combined input consumed by `useMotiVisualState`. */
+export interface CombinedAvatarSignals {
+  requestPending: boolean;
+  hasError: boolean;
+  composing: boolean;
+  answerCount: number;
+  hasMessages: boolean;
+}
+
+/**
+ * Combines conversation and teach-back signals into one set for the visual-state
+ * mapping, so a single priority order governs both. Teach-back only contributes
+ * while its activity is open; closing it returns Moti to the normal
+ * conversation-derived state.
+ *
+ * Because the mapping's priority is thinking > error > explaining > listening,
+ * a pending teach-back evaluation automatically outranks normal idle/listening,
+ * and a normal chat request still drives Moti on its own.
+ */
+export function combineAvatarSignals(
+  chat: ChatAvatarSignals,
+  teachBack: TeachBackAvatarSignals,
+): CombinedAvatarSignals {
+  const mirrorActive = teachBack.active;
+  return {
+    requestPending: chat.requestPending || (mirrorActive && teachBack.pending),
+    hasError: chat.hasError || (mirrorActive && teachBack.hasError),
+    composing: chat.composing || (mirrorActive && teachBack.composing),
+    answerCount: chat.answerCount + (mirrorActive ? teachBack.feedbackCount : 0),
+    hasMessages: chat.hasMessages || mirrorActive,
+  };
+}
+
 /** Every visual state, useful for exhaustive iteration and tests. */
 export const VISUAL_STATES: readonly MotiVisualState[] = [
   "idle",

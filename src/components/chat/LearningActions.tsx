@@ -7,6 +7,7 @@ import {
   IconBook,
   IconChat,
   IconLightbulb,
+  IconTarget,
 } from "@/components/ui/icons";
 
 const ACTION_CONFIG: Record<
@@ -23,23 +24,36 @@ interface LearningActionsProps {
   actions: SuggestedLearningAction[];
   hasSources: boolean;
   disabled: boolean;
+  /** Eligibility is decided by the caller via `isTeachBackEligible`. */
+  canTeachBack: boolean;
+  teachBackOpen: boolean;
+  teachBackBlocked: boolean;
   onExplainSimply: () => void;
   onGiveExample: () => void;
   onShowSource: () => void;
   onAskFollowUp: () => void;
+  onTeachBack: () => void;
 }
 
 // Renders the actions Moti suggested for one answer. "show-source" opens a local
 // preview and never calls the API, so it stays enabled while a request is
 // pending; the others send a grounded follow-up and are disabled while pending.
+//
+// "Teach it back" (Phase 7) opens the Moti Mirror activity. It appears only for
+// an eligible grounded answer and is disabled while another activity is open,
+// since only one teach-back may run at a time.
 export function LearningActions({
   actions,
   hasSources,
   disabled,
+  canTeachBack,
+  teachBackOpen,
+  teachBackBlocked,
   onExplainSimply,
   onGiveExample,
   onShowSource,
   onAskFollowUp,
+  onTeachBack,
 }: LearningActionsProps) {
   const handlers: Record<SuggestedLearningAction, () => void> = {
     "explain-simply": onExplainSimply,
@@ -51,7 +65,7 @@ export function LearningActions({
   const visible = actions.filter(
     (action) => action !== "show-source" || hasSources,
   );
-  if (visible.length === 0) return null;
+  if (visible.length === 0 && !canTeachBack) return null;
 
   return (
     <div
@@ -75,6 +89,23 @@ export function LearningActions({
           </button>
         );
       })}
+
+      {canTeachBack && !teachBackOpen && (
+        <button
+          type="button"
+          onClick={onTeachBack}
+          disabled={teachBackBlocked}
+          title={
+            teachBackBlocked
+              ? "Close the open Moti Mirror activity first."
+              : undefined
+          }
+          className="inline-flex items-center gap-1.5 rounded-full border border-moti-navy/25 bg-moti-navy/[0.04] px-2.5 py-1 text-xs font-medium text-moti-navy transition-colors hover:border-moti-navy/40 hover:bg-moti-navy/10 focus-visible:border-moti-navy/50 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          <IconTarget className="h-3.5 w-3.5 text-moti-navy-soft" />
+          Teach it back
+        </button>
+      )}
     </div>
   );
 }

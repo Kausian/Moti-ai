@@ -9,8 +9,10 @@ import { JourneyPanel } from "@/components/learning/JourneyPanel";
 import { SettingsDrawer } from "@/components/settings/SettingsDrawer";
 import { useCourseConfiguration } from "@/hooks/useCourseConfiguration";
 import { useMotiConversation } from "@/hooks/useMotiConversation";
+import { useMotiMirror } from "@/hooks/useMotiMirror";
 import { useMotiVisualState } from "@/hooks/useMotiVisualState";
-import type { LearnerLevel } from "@/lib/types";
+import { combineAvatarSignals } from "@/lib/avatar/state-mapping";
+import type { LearnerLevel, LoopStage, MotiLearningLoopStage } from "@/lib/types";
 import {
   LOOP_STAGES,
   demoCourse,
@@ -22,6 +24,14 @@ const LEVEL_LABEL: Record<LearnerLevel, string> = {
   beginner: "Beginner",
   intermediate: "Intermediate",
   advanced: "Advanced",
+};
+
+/** The Moti Mirror stage names map onto the displayed learning-loop stages. */
+const LOOP_STAGE_LABEL: Record<MotiLearningLoopStage, LoopStage> = {
+  think: "Think",
+  explain: "Explain",
+  correct: "Correct",
+  remember: "Remember",
 };
 
 // The workspace shell owns presentational UI state (mobile panel + drawer). The
@@ -36,6 +46,7 @@ export function LearningWorkspace() {
   // Moti assistant read one source of truth; Moti's visual state is derived from
   // real conversation behaviour (pending / error / new answer / composing).
   const conversation = useMotiConversation();
+  const mirror = useMotiMirror();
   const [composerActive, setComposerActive] = useState(false);
   const answerCount = useMemo(
     () =>
@@ -44,13 +55,34 @@ export function LearningWorkspace() {
       ).length,
     [conversation.messages],
   );
-  const visualState = useMotiVisualState({
-    requestPending: conversation.isPending,
-    hasError: conversation.error !== null,
-    composing: composerActive,
-    answerCount,
-    hasMessages: conversation.messages.length > 0,
-  });
+
+  // One priority order governs both the conversation and the teach-back, so a
+  // pending evaluation outranks idle/listening while normal chat still works.
+  const visualState = useMotiVisualState(
+    combineAvatarSignals(
+      {
+        requestPending: conversation.isPending,
+        hasError: conversation.error !== null,
+        composing: composerActive,
+        answerCount,
+        hasMessages: conversation.messages.length > 0,
+      },
+      {
+        active: mirror.state !== null,
+        pending: mirror.state?.pending ?? false,
+        hasError: mirror.state?.error != null,
+        feedbackCount: mirror.feedbackCount,
+        composing: mirror.drafting,
+      },
+    ),
+  );
+
+  // The activity is the single source of truth for the loop stage and the
+  // current concept while it is open; otherwise the default state is shown.
+  const currentStage = mirror.state
+    ? LOOP_STAGE_LABEL[mirror.stage]
+    : demoCourse.currentStage;
+  const currentConcept = mirror.state?.conceptTitle ?? demoCourse.currentConcept;
 
   const visibility = (panel: WorkspacePanel) =>
     activePanel === panel ? "block" : "hidden";
@@ -79,9 +111,9 @@ export function LearningWorkspace() {
           >
             <AssistantPanel
               visualState={visualState}
-              concept={demoCourse.currentConcept}
+              concept={currentConcept}
               stages={LOOP_STAGES}
-              currentStage={demoCourse.currentStage}
+              currentStage={currentStage}
             />
           </div>
 
@@ -93,6 +125,7 @@ export function LearningWorkspace() {
           >
             <ConversationPanel
               conversation={conversation}
+              mirror={mirror}
               onComposerActiveChange={setComposerActive}
             />
           </div>

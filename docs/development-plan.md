@@ -261,39 +261,88 @@ fallbacks, and no regression to lint / tests / build.
 
 ---
 
-## Phase 7 — Active-learning loop (Think → Explain → Correct)
+## Phase 7 — Moti Mirror teach-back _(complete)_
 
-**Goal:** the teach-back and correction pedagogy.
+**Goal:** make the Moti Learning Loop real — the learner explains a concept in
+their own words and receives structured, source-grounded coaching. This turns the
+previously-disabled "Teach it back" action into a working feature.
 
-**Deliverables**
-- Moti Mirror teach-back interaction (learner explains in their own words).
-- `/api/evaluate` handler for misconception detection + correction against source.
-- Adaptive micro-challenges sized to the learner's level (wire the already-built
-  `celebrating` Moti state to challenge success).
+**Deliverables (built)**
+- **`POST /api/teach-back`** — a *separate* Node route handler (not a mode flag on
+  `/api/chat`): teach-back has its own request, prompt, schema, and consistency
+  rules, and deliberately sends **no conversation history**.
+- Server teach-back layer (`lib/mirror`): bounded request validation, a layered
+  system instruction (hard rules → rubric → subordinate configurable style →
+  course context), delimited/escaped untrusted sources *and* learner explanation,
+  a focused JSON `responseSchema`, runtime response validation with per-mode
+  consistency enforcement, and source-id verification.
+- Inline **Moti Mirror activity** (`components/mirror`) anchored to the grounded
+  answer: teach-back composer (Ctrl/Cmd+Enter, never bare Enter), structured
+  feedback (what you understood / what is missing / misconceptions / a clearer
+  explanation / mastery recommendation + rationale / supporting sources /
+  next action), and a Memory Echo preview.
+- Pure activity state machine (`lib/mirror/mirror-state.ts`) + `useMotiMirror`:
+  eligibility, concept derivation, loop stage, retry preserving the explanation,
+  cancel, and close.
+- The **learning loop and current concept in the AssistantPanel are now driven by
+  the real activity** (Think → Explain → Correct → Remember), with one shared
+  source of truth.
+- 3D Moti reacts via `combineAvatarSignals`: pending → thinking, error → error,
+  feedback → explaining, drafting → listening; a pending teach-back outranks
+  idle/listening while normal chat still works. Geometry is unchanged.
+- 94 new automated tests (**190 total**); none calls the real Gemini API.
 
-**Dependencies:** Phase 5 (grounded model access).
+**New dependencies:** none.
 
-**Risks:** misconception detection is best-effort; challenge difficulty
-calibration; keeping feedback encouraging, not discouraging.
+**Dependencies:** Phase 5 (grounded model access + validated sources).
 
-**Validation:** an explanation with a known misconception is caught and
-corrected; a micro-challenge is generated; lint + build clean.
+**Evaluation rubric:** exploring / developing / understood / not-evaluated,
+defined in `moti-mirror-system-instruction.ts` and documented in
+`docs/architecture.md`. Conceptual understanding only — spelling, grammar, style,
+and length are explicitly **not** criteria.
 
-**Definition of done:** the Think → Explain → Correct portion of the flow works
-end-to-end on the demo course.
+**Not in this phase:** no quizzes or challenges, **no Mastery Journey mutation**,
+**no Memory Echo scheduling or persistence** (the recall prompt is a preview
+only), no teach-back persistence, and `celebrating` is still not triggered.
+
+**Definition of done:** a learner teaches a grounded concept back and receives
+grounded coaching with a mastery *recommendation* and a recall prompt, while the
+Mastery Journey and Memory Echo queue remain unchanged.
 
 ---
 
-## Phase 8 — Mastery Journey & Memory Echo (Remember)
+## Phase 8 — Adaptive micro-challenges
 
-**Goal:** track understanding and schedule review.
+**Goal:** practice pitched to the learner's current level.
 
 **Deliverables**
-- Concept status tracking: exploring / developing / understood (persisted).
-- Mastery Journey view.
-- Memory Echo review queue with spaced scheduling (prototype-level).
+- Adaptive micro-challenges generated from the grounded sources.
+- Challenge success wired to the already-built `celebrating` Moti state.
 
-**Dependencies:** Phases 3 & 7 (persistence + concepts to track).
+**Dependencies:** Phase 7 (the correction loop that sizes difficulty).
+
+**Risks:** challenge difficulty calibration; keeping practice encouraging.
+
+**Validation:** a micro-challenge is generated and answered; lint + build clean.
+
+**Definition of done:** the learner can practise a concept and Moti celebrates a
+genuine success.
+
+---
+
+## Phase 9 — Mastery Journey & Memory Echo (Remember)
+
+**Goal:** track understanding and schedule review — the point at which Moti
+Mirror's recommendation is allowed to *change* state.
+
+**Deliverables**
+- Concept status tracking: exploring / developing / understood (persisted),
+  applying the Phase 7 mastery recommendation.
+- Mastery Journey view driven by real state.
+- Memory Echo review queue with spaced scheduling, consuming the Phase 7 recall
+  prompts (which are preview-only until now).
+
+**Dependencies:** Phases 3 & 7 (persistence + recommendations to apply).
 
 **Risks:** scheduling logic complexity; keeping it simple and demonstrable.
 
@@ -305,7 +354,7 @@ persists.
 
 ---
 
-## Phase 9 — Polish, demo & deployment
+## Phase 10 — Polish, demo & deployment
 
 **Goal:** a demonstrable, deployed prototype.
 
