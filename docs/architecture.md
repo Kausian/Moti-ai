@@ -202,6 +202,126 @@ flowchart TD
 8. **Client** (`useMotiConversation`): renders the answer as plain text with the
    validated sources as clickable chips; history is kept **in memory only**.
 
+## Adaptive micro-challenge flow (implemented in Phase 8)
+
+A challenge is Moti setting a focused practice task and marking the response —
+deliberately distinct from Moti Mirror, where the learner explains first and gets
+detailed coaching.
+
+```mermaid
+flowchart TD
+  A["Grounded assistant answer\n(validated sources)"]
+  C["Challenge me\n(eligible answers only)"]
+  T["Type + difficulty\n(or Surprise me / Recommended)"]
+  G["POST /api/challenge/generate"]
+  V1["Validated grounded challenge\n(server-assigned challengeId)"]
+  L["Learner answer"]
+  D{"Challenge type?"}
+  Det["Deterministic choice marking\n(no Gemini call)"]
+  E["POST /api/challenge/evaluate\n→ Gemini (free-response only)"]
+  P["applyAttemptPolicy\n(mastery / next action / reveal)"]
+  F["Validated feedback"]
+  Cel["Correct → Moti celebrates"]
+  R["Recommendation + Memory Echo preview only"]
+  N["No Mastery Journey mutation until Phase 9"]
+
+  A --> C --> T --> G --> V1 --> L --> D
+  D -->|multiple-choice / scenario| Det --> P
+  D -->|correct-the-mistake / explain-in-own-words| E --> P
+  P --> F --> Cel --> R --> N
+```
+
+### Why two routes, and why generation is separate from evaluation
+
+Generation and evaluation have different requests, prompts, schemas, and
+validators: one writes a task from sources, the other marks an answer against a
+task. A single endpoint would need a union request type and a validator
+permissive to both shapes. They are also separate from `/api/chat` and
+`/api/teach-back` for the same reason. Both reuse the existing Gemini client,
+model (`GEMINI_MODEL` → `gemini-3.1-flash-lite`), 45s timeout, and safe error
+categories.
+
+### Which types use a model, and which do not
+
+| Type | Marking |
+|---|---|
+| `multiple-choice` | **Deterministic** — compare the selected option to the validated `correctOptionId` |
+| `scenario` | **Deterministic** — same |
+| `correct-the-mistake` | **Gemini** — judges free-text conceptual understanding |
+| `explain-in-own-words` | **Gemini** — same |
+
+Comparing two option ids is exact, instant, and free; asking a model to do it
+would add latency, cost, and non-determinism for no benefit. Choice feedback still
+comes from the challenge's already-validated `referenceExplanation`, so it stays
+grounded. Verified in tests: the injected `generate` mock is **never called** for a
+choice answer.
+
+### The server owns policy, not the model
+
+`lib/challenge/attempt-policy.ts` is pure and deterministic. It derives the
+`masteryRecommendation`, the `nextAction`, and whether the full explanation is
+revealed, from `outcome + attemptNumber`:
+
+- **correct** → `understood` (first try) or `developing` (after a retry); full
+  explanation; offer another challenge.
+- **partially-correct** → `developing`; **incorrect** → `exploring`.
+  A first failure shows only the generated `hint` and offers a Retry; once the
+  **2**-attempt limit is reached the full explanation is shown and the source is
+  recommended.
+- **not-evaluated** → no mastery claim and no explanation at all.
+
+This is defence in depth: even if a model (or an injected instruction) tried to
+grant "understood" for a wrong answer, or hand out an extra retry, the policy
+wins. The evaluation schema therefore does not even ask the model for mastery.
+
+The `hint` is generated at challenge-generation time, so a first-failure nudge
+costs no extra AI call.
+
+### Difficulty
+
+`beginner` / `intermediate` / `advanced` shape how the challenge is *written*
+(recall → application → nuanced discrimination). "Recommended" simply follows the
+configured learner level. It is **not** a measurement of the learner's ability, and
+the UI says so.
+
+### Source grounding and validation
+
+Challenges are built only from the ≤4 excerpts attached to the selected answer;
+**no conversation history, documents, or index** are ever sent. Generated output is
+re-validated at runtime: exactly four options for choice types, unique option ids,
+`correctOptionId` must name a presented option, bounded strings, ≤5 essential
+points, and unknown/duplicate source ids removed. The `challengeId` is always
+server-generated and any id the model invents is ignored.
+
+### Prototype limitation — the answer key lives in client state
+
+Between generation and evaluation the browser holds the challenge, including
+`correctOptionId` / `referenceAnswer`. The answer is never displayed before
+submission, and the server re-validates the whole challenge object on evaluation
+(a tampered `correctOptionId` that names no option is rejected). But this is a
+**learning prototype, not a secure examination platform**: a technically
+knowledgeable learner could inspect client state and read the answer. A production
+assessment would need server-side challenge sessions or signed challenge state;
+neither is in scope here.
+
+### Celebrating
+
+`celebrating` is triggered **only** by a validated correct answer, via a
+`celebrationCount` that only increments on `outcome === "correct"`. It runs for
+`CELEBRATING_DURATION_MS` (3s) and then falls back to the normal derived state.
+The mapping priority is `thinking > error > celebrating > explaining > listening`,
+so a new request or an error interrupts a celebration immediately. Wrong and
+partially-correct answers increment only the shared result count → `explaining`,
+never celebrating. Reduced motion uses the existing static positive pose; the 3D
+geometry is unchanged.
+
+### Loop display
+
+A challenge does **not** drive Think → Explain → Correct → Remember — that is Moti
+Mirror's flow and the product's identity. The challenge shows its own lightweight
+progress (Prepare → Attempt → Check → Review) inside the activity, and owns the
+AssistantPanel's current concept only while it is open.
+
 ## Moti Mirror teach-back flow (implemented in Phase 7)
 
 The Moti Learning Loop becomes real here: **Think → Explain → Correct → Remember**.
@@ -460,21 +580,39 @@ AI-driven concept detection is later work.
   content, and raw model output are **never logged**. Feedback renders as plain
   text (no `dangerouslySetInnerHTML`, no Markdown/HTML execution) and is held in
   memory only — teach-back results are not persisted.
-- **Public endpoints:** `/api/chat` and `/api/teach-back` are unauthenticated and
-  rate-limited only by the provider quota. Production would need server-side rate
-  limiting and auth; no third-party rate-limiter is added in this phase.
+- **Challenge traffic (Phase 8):** exclusively server-side via
+  `POST /api/challenge/generate` and `POST /api/challenge/evaluate`. Both bound
+  every field, require **at least one** source (never generating or marking
+  ungrounded), send only the ≤4 excerpts attached to the selected answer, and send
+  **no conversation history**. The challenge object returned by the browser is
+  fully re-validated (client-held state is untrusted). Source text and the
+  learner's answer are delimited and escaped as untrusted data, and returned source
+  ids are re-validated. Learner answers, source content, and raw model output are
+  **never logged**. Challenge prompts, options, answers, and feedback all render as
+  plain text (no `dangerouslySetInnerHTML`, no Markdown/HTML execution) and are held
+  in memory only.
+- **Challenges are not an exam:** the answer key lives in client state between
+  generation and evaluation (see the prototype limitation above). This is a
+  learning prototype, not a secure assessment platform, and it makes no formal
+  grading claim.
+- **Public endpoints:** `/api/chat`, `/api/teach-back`, and both `/api/challenge/*`
+  routes are unauthenticated and rate-limited only by the provider quota.
+  Production would need authentication, server-side rate limiting, protected
+  assessment state, and secure challenge sessions; none are added in this phase.
 
 ## Planned module structure
 
 ```
-# Present structure (through Phase 7 — Moti Mirror teach-back)
+# Present structure (through Phase 8 — adaptive micro-challenges)
 src/
   app/
     layout.tsx            # root layout, fonts, metadata
     page.tsx              # CourseConfigurationProvider + workspace shell
     globals.css           # Tailwind v4 theme + brand tokens + motion
-    api/chat/route.ts       # POST-only grounded conversation (Node runtime)
-    api/teach-back/route.ts # POST-only Moti Mirror evaluation (Node runtime)
+    api/chat/route.ts               # POST-only grounded conversation (Node runtime)
+    api/teach-back/route.ts         # POST-only Moti Mirror evaluation
+    api/challenge/generate/route.ts # POST-only challenge generation
+    api/challenge/evaluate/route.ts # POST-only challenge marking
   components/
     layout/               # AppHeader, LearningWorkspace shell, MobilePanelTabs
     assistant/            # AssistantPanel, MotiAvatar (client-only dynamic import),
@@ -485,6 +623,10 @@ src/
                           #   AiPrivacyNotice, AiConsentDialog
     mirror/               # MotiMirrorActivity, TeachBackComposer, MotiMirrorFeedback,
                           #   MisconceptionItem, MemoryEchoPreview, MirrorError
+    challenge/            # MotiChallengeActivity, ChallengeSetup, ChoiceChallenge,
+                          #   ChallengeOption, FreeResponseChallenge,
+                          #   ChallengeFeedback, ChallengeError,
+                          #   ChallengeMemoryEchoPreview
     learning/             # JourneyPanel, MemoryEcho
     settings/             # SettingsDrawer, CourseSettingsForm, KnowledgeUploader,
                           #   PasteKnowledgeForm, KnowledgeDocumentList/Card,
@@ -497,17 +639,20 @@ src/
     useKnowledgeIndex.ts            # memoized in-memory index (rebuilds on change)
     useMotiConversation.ts          # conversation state, send/cancel/retry/consent
     useMotiMirror.ts                # teach-back activity (pure reducer + fetch)
-    useMotiVisualState.ts           # signals → MotiVisualState (+ explaining window)
+    useMotiChallenge.ts             # challenge activity (pure reducer + 2 fetches)
+    useMotiVisualState.ts           # signals → MotiVisualState (+ 2 timed windows)
     useReducedMotion.ts             # prefers-reduced-motion (useSyncExternalStore)
   data/
     demo-data.ts          # typed mock data (assistant panel, journey, echo)
     sample-course.ts      # deterministic default course + sample document
   lib/
-    types.ts              # shared TypeScript types (chat, avatar, Moti Mirror)
+    types.ts              # shared types (chat, avatar, Moti Mirror, challenges)
     documents/            # pure ingestion (constants, validation, parse, ...)
     chunking/             # constants, split-sections, chunk-document, build-chunks
     retrieval/            # tokenize, build-index, score-chunk, retrieve-knowledge
     storage/              # course-configuration-storage (versioned localStorage)
+    grounding/            # answer-activity — the shared "is this answer eligible?"
+                          #   + concept-title rules used by Mirror AND challenges
     chat/                 # constants, validate-chat-request, conversation-history,
                           #   ai-consent (shared session acknowledgement)
     ai/                   # constants, gemini-client, moti-system-instruction,
@@ -518,14 +663,22 @@ src/
                           #   response-schema, validate-mirror-response,
                           #   generate-mirror-feedback (server-only),
                           #   eligibility + mirror-state (pure, client-safe)
+    challenge/            # constants, request-parts, validate-generation-request,
+                          #   validate-evaluation-request, challenge-system-instruction,
+                          #   build-challenge-prompts, response-schemas,
+                          #   validate-generated-challenge, validate-challenge-evaluation,
+                          #   generate-challenge, evaluate-challenge (server-only),
+                          #   attempt-policy + eligibility + challenge-state
+                          #   (pure, client-safe)
     avatar/               # constants (3D colours + durations), state-mapping
                           #   (+ combineAvatarSignals), animation-config
                           #   (pure, no three import → WebGL-free tests)
 
 # Automated tests (Vitest, dev-only): co-located *.test.ts under lib/chunking,
-# lib/retrieval, lib/chat, lib/ai, lib/mirror, and lib/avatar; run with `npm test`.
-# No test calls the real Gemini API and no test creates a WebGL context — the
-# generation, mapping, and activity-state boundaries are pure/mockable.
+# lib/retrieval, lib/chat, lib/ai, lib/mirror, lib/challenge, and lib/avatar; run
+# with `npm test`. No test calls the real Gemini API and no test creates a WebGL
+# context — the generation, mapping, policy, and activity-state boundaries are
+# pure/mockable.
 ```
 
 _Moti Mirror reuses `lib/ai/error-mapping.ts` rather than adding a parallel

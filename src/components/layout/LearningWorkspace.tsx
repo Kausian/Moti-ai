@@ -10,6 +10,7 @@ import { SettingsDrawer } from "@/components/settings/SettingsDrawer";
 import { useCourseConfiguration } from "@/hooks/useCourseConfiguration";
 import { useMotiConversation } from "@/hooks/useMotiConversation";
 import { useMotiMirror } from "@/hooks/useMotiMirror";
+import { useMotiChallenge } from "@/hooks/useMotiChallenge";
 import { useMotiVisualState } from "@/hooks/useMotiVisualState";
 import { combineAvatarSignals } from "@/lib/avatar/state-mapping";
 import type { LearnerLevel, LoopStage, MotiLearningLoopStage } from "@/lib/types";
@@ -47,6 +48,7 @@ export function LearningWorkspace() {
   // real conversation behaviour (pending / error / new answer / composing).
   const conversation = useMotiConversation();
   const mirror = useMotiMirror();
+  const challenge = useMotiChallenge();
   const [composerActive, setComposerActive] = useState(false);
   const answerCount = useMemo(
     () =>
@@ -74,15 +76,28 @@ export function LearningWorkspace() {
         feedbackCount: mirror.feedbackCount,
         composing: mirror.drafting,
       },
+      {
+        active: challenge.state !== null,
+        pending: challenge.state?.pending ?? false,
+        hasError: challenge.state?.error != null,
+        answering: challenge.answering,
+        resultCount: challenge.resultCount,
+        celebrationCount: challenge.celebrationCount,
+      },
     ),
   );
 
-  // The activity is the single source of truth for the loop stage and the
-  // current concept while it is open; otherwise the default state is shown.
+  // Moti Mirror is the single source of truth for the learning-loop stage while
+  // it is open. A challenge deliberately does NOT drive the loop — it is a focused
+  // practice task, not the full Think → Explain → Correct → Remember flow — but it
+  // does own the current concept while active.
   const currentStage = mirror.state
     ? LOOP_STAGE_LABEL[mirror.stage]
     : demoCourse.currentStage;
-  const currentConcept = mirror.state?.conceptTitle ?? demoCourse.currentConcept;
+  const currentConcept =
+    mirror.state?.conceptTitle ??
+    challenge.state?.conceptTitle ??
+    demoCourse.currentConcept;
 
   const visibility = (panel: WorkspacePanel) =>
     activePanel === panel ? "block" : "hidden";
@@ -126,6 +141,7 @@ export function LearningWorkspace() {
             <ConversationPanel
               conversation={conversation}
               mirror={mirror}
+              challenge={challenge}
               onComposerActiveChange={setComposerActive}
             />
           </div>

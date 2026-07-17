@@ -311,22 +311,52 @@ Mastery Journey and Memory Echo queue remain unchanged.
 
 ---
 
-## Phase 8 — Adaptive micro-challenges
+## Phase 8 — Adaptive micro-challenges _(complete)_
 
-**Goal:** practice pitched to the learner's current level.
+**Goal:** source-grounded practice pitched to the learner's level. This turns the
+previously-disabled "Challenge me" action into a working activity.
 
-**Deliverables**
-- Adaptive micro-challenges generated from the grounded sources.
-- Challenge success wired to the already-built `celebrating` Moti state.
+**Deliverables (built)**
+- **Two** Node route handlers — **`POST /api/challenge/generate`** and
+  **`POST /api/challenge/evaluate`** — separate from each other and from
+  `/api/chat` / `/api/teach-back`, because generation and marking have different
+  requests, prompts, schemas, and validators. Neither sends conversation history.
+- Four challenge types: `multiple-choice`, `scenario`, `correct-the-mistake`,
+  `explain-in-own-words`, plus "Surprise me".
+- **Deterministic marking for choice types** (no Gemini call — comparing option
+  ids needs no model); **Gemini marking for free-response** conceptual answers.
+- **Server-owned policy** (`lib/challenge/attempt-policy.ts`): mastery, next
+  action, and answer reveal derived from `outcome + attemptNumber`. Max **2**
+  attempts — a first failure earns a generated hint and a Retry; the second
+  reveals the full grounded explanation and recommends the source.
+- Difficulty (`beginner`/`intermediate`/`advanced`, default "Recommended" = the
+  configured learner level) that shapes how the challenge is written, explicitly
+  not a measure of ability.
+- Inline challenge activity (`components/challenge`) with native `select`s, a
+  semantic `fieldset`/`legend` + radio options, a free-response composer
+  (Ctrl/Cmd+Enter, never bare Enter), and outcome shown by icon + text.
+- **`celebrating` is now triggered** — only by a validated correct answer, for
+  ~3s, and immediately overridden by a new request or an error. The 3D geometry is
+  unchanged.
+- Only one AI learning activity may run at a time: an open activity blocks the
+  other rather than silently discarding work.
+- 130 new automated tests (**320 total**); none calls the real Gemini API.
 
-**Dependencies:** Phase 7 (the correction loop that sizes difficulty).
+**New dependencies:** none.
 
-**Risks:** challenge difficulty calibration; keeping practice encouraging.
+**Dependencies:** Phase 5 (grounded model access + validated sources).
 
-**Validation:** a micro-challenge is generated and answered; lint + build clean.
+**Not in this phase:** **no Mastery Journey mutation**, **no Memory Echo scheduling
+or persistence**, no challenge history, no long-term adaptive profile, no formal
+grading or ability scores. Challenge state is in-memory only.
 
-**Definition of done:** the learner can practise a concept and Moti celebrates a
-genuine success.
+**Known limitation:** the answer key is held in client state between generation and
+evaluation, so this is a learning prototype rather than a secure examination
+platform. Documented in `docs/architecture.md`.
+
+**Definition of done:** a learner generates a grounded challenge, answers it, gets
+grounded feedback with a retry, and Moti celebrates a genuine correct answer —
+while the Mastery Journey and Memory Echo queue remain unchanged.
 
 ---
 

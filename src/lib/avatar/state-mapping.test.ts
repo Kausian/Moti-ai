@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type {
+  ChallengeAvatarSignals,
   ChatAvatarSignals,
   ConversationSignals,
   TeachBackAvatarSignals,
@@ -183,6 +184,7 @@ describe("combineAvatarSignals (chat + Moti Mirror teach-back)", () => {
       hasError: false,
       composing: false,
       answerCount: 1,
+      celebrationCount: 0,
       hasMessages: true,
     });
     expect(visualStateFor(IDLE_CHAT, { ...CLOSED_MIRROR, active: false })).toBe("idle");
@@ -203,6 +205,156 @@ describe("combineAvatarSignals (chat + Moti Mirror teach-back)", () => {
       { ...CLOSED_MIRROR, active: true },
     );
     expect(combined.hasMessages).toBe(true);
+  });
+});
+
+describe("combineAvatarSignals (micro-challenge, Phase 8)", () => {
+  const IDLE_CHAT: ChatAvatarSignals = {
+    requestPending: false,
+    hasError: false,
+    composing: false,
+    answerCount: 1,
+    hasMessages: true,
+  };
+  const CLOSED_MIRROR: TeachBackAvatarSignals = {
+    active: false,
+    pending: false,
+    hasError: false,
+    feedbackCount: 0,
+    composing: false,
+  };
+  const CLOSED_CHALLENGE: ChallengeAvatarSignals = {
+    active: false,
+    pending: false,
+    hasError: false,
+    answering: false,
+    resultCount: 0,
+    celebrationCount: 0,
+  };
+
+  /** Resolves the combined signals the way the hook's mapping ultimately does. */
+  function visualStateFor(
+    challenge: ChallengeAvatarSignals,
+    windows: { explaining?: boolean; celebrating?: boolean } = {},
+    chat: ChatAvatarSignals = IDLE_CHAT,
+  ) {
+    const combined = combineAvatarSignals(chat, CLOSED_MIRROR, challenge);
+    return mapConversationToVisualState({
+      requestPending: combined.requestPending,
+      hasError: combined.hasError,
+      celebrationJustEarned: Boolean(windows.celebrating) && combined.hasMessages,
+      answerJustCompleted: Boolean(windows.explaining) && combined.hasMessages,
+      composing: combined.composing,
+    });
+  }
+
+  it("maps a pending generation or evaluation to thinking", () => {
+    expect(visualStateFor({ ...CLOSED_CHALLENGE, active: true, pending: true })).toBe(
+      "thinking",
+    );
+  });
+
+  it("maps challenge setup and answering to listening", () => {
+    expect(visualStateFor({ ...CLOSED_CHALLENGE, active: true, answering: true })).toBe(
+      "listening",
+    );
+  });
+
+  it("maps a challenge error to error", () => {
+    expect(visualStateFor({ ...CLOSED_CHALLENGE, active: true, hasError: true })).toBe(
+      "error",
+    );
+  });
+
+  it("maps a correct result to celebrating", () => {
+    expect(
+      visualStateFor(
+        { ...CLOSED_CHALLENGE, active: true, resultCount: 1, celebrationCount: 1 },
+        { celebrating: true, explaining: true },
+      ),
+    ).toBe("celebrating");
+  });
+
+  it("maps a partially correct or incorrect result to explaining, never celebrating", () => {
+    // A wrong answer increments the result count but never the celebration count.
+    const wrong = { ...CLOSED_CHALLENGE, active: true, resultCount: 1, celebrationCount: 0 };
+    expect(visualStateFor(wrong, { explaining: true })).toBe("explaining");
+    expect(visualStateFor(wrong, { explaining: true })).not.toBe("celebrating");
+  });
+
+  it("lets a new request immediately override a celebration", () => {
+    expect(
+      visualStateFor(
+        { ...CLOSED_CHALLENGE, active: true, pending: true, celebrationCount: 1 },
+        { celebrating: true },
+      ),
+    ).toBe("thinking");
+  });
+
+  it("lets an error immediately override a celebration", () => {
+    expect(
+      visualStateFor(
+        { ...CLOSED_CHALLENGE, active: true, hasError: true, celebrationCount: 1 },
+        { celebrating: true },
+      ),
+    ).toBe("error");
+  });
+
+  it("returns to explaining once the celebration window closes", () => {
+    expect(
+      visualStateFor(
+        { ...CLOSED_CHALLENGE, active: true, resultCount: 1, celebrationCount: 1 },
+        { celebrating: false, explaining: true },
+      ),
+    ).toBe("explaining");
+  });
+
+  it("returns to the normal state once both windows close", () => {
+    expect(
+      visualStateFor({
+        ...CLOSED_CHALLENGE,
+        active: true,
+        resultCount: 1,
+        celebrationCount: 1,
+      }),
+    ).toBe("idle");
+  });
+
+  it("keeps a normal chat request in control while a challenge is open", () => {
+    expect(
+      visualStateFor(
+        { ...CLOSED_CHALLENGE, active: true, answering: true },
+        {},
+        { ...IDLE_CHAT, requestPending: true },
+      ),
+    ).toBe("thinking");
+  });
+
+  it("contributes nothing once the challenge is closed", () => {
+    const combined = combineAvatarSignals(IDLE_CHAT, CLOSED_MIRROR, {
+      active: false,
+      pending: true,
+      hasError: true,
+      answering: true,
+      resultCount: 3,
+      celebrationCount: 2,
+    });
+    expect(combined).toEqual({
+      requestPending: false,
+      hasError: false,
+      composing: false,
+      answerCount: 1,
+      celebrationCount: 0,
+      hasMessages: true,
+    });
+  });
+
+  it("never celebrates from chat or teach-back alone", () => {
+    const combined = combineAvatarSignals(
+      { ...IDLE_CHAT, answerCount: 5 },
+      { ...CLOSED_MIRROR, active: true, feedbackCount: 3 },
+    );
+    expect(combined.celebrationCount).toBe(0);
   });
 });
 

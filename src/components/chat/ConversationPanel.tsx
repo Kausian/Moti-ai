@@ -7,8 +7,11 @@ import type {
   UseMotiConversationResult,
 } from "@/hooks/useMotiConversation";
 import type { UseMotiMirrorResult } from "@/hooks/useMotiMirror";
+import type { UseMotiChallengeResult } from "@/hooks/useMotiChallenge";
 import { deriveConceptTitle } from "@/lib/mirror/eligibility";
 import { MotiMirrorActivity } from "@/components/mirror/MotiMirrorActivity";
+import { MotiChallengeActivity } from "@/components/challenge/MotiChallengeActivity";
+import { useCourseConfiguration } from "@/hooks/useCourseConfiguration";
 import {
   PlainTextPreviewDialog,
   type PreviewContent,
@@ -43,6 +46,8 @@ interface ConversationPanelProps {
   conversation: UseMotiConversationResult;
   /** The shared Moti Mirror activity, owned by the workspace (drives the loop + avatar). */
   mirror: UseMotiMirrorResult;
+  /** The shared micro-challenge activity, owned by the workspace (drives the avatar). */
+  challenge: UseMotiChallengeResult;
   /** Reports whether the learner is actively composing (drives Moti's listening state). */
   onComposerActiveChange?: (active: boolean) => void;
 }
@@ -50,8 +55,10 @@ interface ConversationPanelProps {
 export function ConversationPanel({
   conversation,
   mirror,
+  challenge,
   onComposerActiveChange,
 }: ConversationPanelProps) {
+  const { configuration } = useCourseConfiguration();
   const {
     messages,
     isPending,
@@ -143,8 +150,17 @@ export function ConversationPanel({
                 message={message}
                 disabled={isPending}
                 teachBackOpen={mirror.state?.messageId === message.id}
+                // Only one AI learning activity may run at a time: any other open
+                // activity blocks a new one rather than silently discarding it.
                 teachBackBlocked={
-                  mirror.state !== null && mirror.state.messageId !== message.id
+                  (mirror.state !== null && mirror.state.messageId !== message.id) ||
+                  challenge.state !== null
+                }
+                challengeOpen={challenge.state?.messageId === message.id}
+                challengeBlocked={
+                  (challenge.state !== null &&
+                    challenge.state.messageId !== message.id) ||
+                  mirror.state !== null
                 }
                 onExplainSimply={explainSimply}
                 onGiveExample={giveExample}
@@ -154,6 +170,12 @@ export function ConversationPanel({
                   const conceptTitle = deriveConceptTitle(sources);
                   if (!conceptTitle) return;
                   mirror.open({ messageId: message.id, conceptTitle, sources });
+                }}
+                onChallenge={() => {
+                  const sources = message.sources ?? [];
+                  const conceptTitle = deriveConceptTitle(sources);
+                  if (!conceptTitle) return;
+                  challenge.open({ messageId: message.id, conceptTitle, sources });
                 }}
                 onPreviewSource={(source) => setPreview(sourceToPreview(source))}
               />
@@ -174,6 +196,32 @@ export function ConversationPanel({
                     giveExample();
                   }}
                   onClose={mirror.close}
+                  onPreviewSource={(source) => setPreview(sourceToPreview(source))}
+                />
+              )}
+
+              {/* The challenge is inline, anchored to the answer it came from. */}
+              {challenge.state?.messageId === message.id && (
+                <MotiChallengeActivity
+                  activity={challenge.state}
+                  stage={challenge.stage}
+                  recommendedLevel={configuration.learnerLevel}
+                  canRetryAnswer={challenge.canRetryAnswer}
+                  onTypeChange={challenge.setType}
+                  onDifficultyChange={challenge.setDifficulty}
+                  onGenerate={challenge.generate}
+                  onSelectOption={challenge.selectOption}
+                  onWrite={challenge.setWrittenAnswer}
+                  onSubmit={challenge.submit}
+                  onRetryRequest={() =>
+                    challenge.state?.challenge
+                      ? challenge.submit()
+                      : challenge.generate()
+                  }
+                  onRetryAnswer={challenge.retry}
+                  onReveal={challenge.reveal}
+                  onCancelRequest={challenge.cancel}
+                  onClose={challenge.close}
                   onPreviewSource={(source) => setPreview(sourceToPreview(source))}
                 />
               )}
@@ -200,7 +248,7 @@ export function ConversationPanel({
           onActiveChange={onComposerActiveChange}
         />
         <p className="px-1 text-[11px] text-moti-navy-soft">
-          Coming in a later phase: Challenge me · Teach it back.
+          Open a grounded answer&apos;s actions to teach it back or take a challenge.
         </p>
       </div>
 
@@ -219,6 +267,13 @@ export function ConversationPanel({
         open={mirror.consentOpen}
         onCancel={mirror.cancelConsent}
         onContinue={mirror.confirmConsent}
+      />
+
+      {/* Challenges reuse the same session acknowledgement and dialog. */}
+      <AiConsentDialog
+        open={challenge.consentOpen}
+        onCancel={challenge.cancelConsent}
+        onContinue={challenge.confirmConsent}
       />
 
       <PlainTextPreviewDialog content={preview} onClose={() => setPreview(null)} />

@@ -113,6 +113,20 @@ away from them without an explicit decision recorded here.
   the Mastery Journey, and the Memory Echo prompt must not be scheduled or
   persisted (both are Phase 9). Moti Mirror state must never enter
   `ConversationMessage[]`.
+- **Adaptive micro-challenges (Phase 8)** run through **two** of their own Route
+  Handlers — **`src/app/api/challenge/generate/route.ts`** and
+  **`src/app/api/challenge/evaluate/route.ts`** — with their contract in
+  `src/lib/challenge/`. Do **not** overload `/api/chat` or `/api/teach-back`.
+  Challenges send **no conversation history** and require **≥1 validated source**.
+  **Choice challenges (multiple-choice / scenario) are marked deterministically
+  and must never call Gemini**; only free-response types do. The server, never the
+  model, owns the mastery recommendation, the next action, and whether the answer
+  is revealed (`lib/challenge/attempt-policy.ts`); max **2** attempts. The
+  `challengeId` is always server-generated (`crypto.randomUUID`). Results are a
+  **recommendation only**: no Mastery Journey mutation, no Memory Echo scheduling,
+  no persistence (all Phase 9). `celebrating` may be triggered **only** by a
+  validated correct answer. Challenge state must never enter
+  `ConversationMessage[]`.
 - **`three` 0.185.1 + `@react-three/fiber` 9.6.1** (runtime) with **`@types/three`
   0.185.1** (dev) — the 3D Moti assistant (Phase 6). `@react-three/fiber` 9 targets
   **React 19** (peer `react >=19 <19.3`). The scene is **client-only**: one

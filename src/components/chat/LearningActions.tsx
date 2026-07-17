@@ -7,6 +7,7 @@ import {
   IconBook,
   IconChat,
   IconLightbulb,
+  IconSignal,
   IconTarget,
 } from "@/components/ui/icons";
 
@@ -28,11 +29,16 @@ interface LearningActionsProps {
   canTeachBack: boolean;
   teachBackOpen: boolean;
   teachBackBlocked: boolean;
+  /** Eligibility is decided by the caller via `isChallengeEligible`. */
+  canChallenge: boolean;
+  challengeOpen: boolean;
+  challengeBlocked: boolean;
   onExplainSimply: () => void;
   onGiveExample: () => void;
   onShowSource: () => void;
   onAskFollowUp: () => void;
   onTeachBack: () => void;
+  onChallenge: () => void;
 }
 
 // Renders the actions Moti suggested for one answer. "show-source" opens a local
@@ -49,11 +55,15 @@ export function LearningActions({
   canTeachBack,
   teachBackOpen,
   teachBackBlocked,
+  canChallenge,
+  challengeOpen,
+  challengeBlocked,
   onExplainSimply,
   onGiveExample,
   onShowSource,
   onAskFollowUp,
   onTeachBack,
+  onChallenge,
 }: LearningActionsProps) {
   const handlers: Record<SuggestedLearningAction, () => void> = {
     "explain-simply": onExplainSimply,
@@ -65,7 +75,7 @@ export function LearningActions({
   const visible = actions.filter(
     (action) => action !== "show-source" || hasSources,
   );
-  if (visible.length === 0 && !canTeachBack) return null;
+  if (visible.length === 0 && !canTeachBack && !canChallenge) return null;
 
   return (
     <div
@@ -96,14 +106,27 @@ export function LearningActions({
           onClick={onTeachBack}
           disabled={teachBackBlocked}
           title={
-            teachBackBlocked
-              ? "Close the open Moti Mirror activity first."
-              : undefined
+            teachBackBlocked ? "Close the open learning activity first." : undefined
           }
           className="inline-flex items-center gap-1.5 rounded-full border border-moti-navy/25 bg-moti-navy/[0.04] px-2.5 py-1 text-xs font-medium text-moti-navy transition-colors hover:border-moti-navy/40 hover:bg-moti-navy/10 focus-visible:border-moti-navy/50 disabled:cursor-not-allowed disabled:opacity-50"
         >
           <IconTarget className="h-3.5 w-3.5 text-moti-navy-soft" />
           Teach it back
+        </button>
+      )}
+
+      {canChallenge && !challengeOpen && (
+        <button
+          type="button"
+          onClick={onChallenge}
+          disabled={challengeBlocked}
+          title={
+            challengeBlocked ? "Close the open learning activity first." : undefined
+          }
+          className="inline-flex items-center gap-1.5 rounded-full border border-moti-navy/25 bg-moti-navy/[0.04] px-2.5 py-1 text-xs font-medium text-moti-navy transition-colors hover:border-moti-navy/40 hover:bg-moti-navy/10 focus-visible:border-moti-navy/50 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          <IconSignal className="h-3.5 w-3.5 text-moti-navy-soft" />
+          Challenge me
         </button>
       )}
     </div>

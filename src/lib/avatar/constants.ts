@@ -45,6 +45,13 @@ export const STATE_INDICATOR_COLOR: Record<MotiVisualState, string> = {
  */
 export const EXPLAINING_DURATION_MS = 3800;
 
+/**
+ * How long a validated correct challenge answer keeps Moti celebrating before
+ * returning to the normal derived state. Kept short and contained — a new
+ * request or an error overrides it immediately (Phase 8).
+ */
+export const CELEBRATING_DURATION_MS = 3000;
+
 /** Device-pixel-ratio cap for the canvas — keeps the scene light on mobile. */
 export const CANVAS_DPR: [number, number] = [1, 1.5];
 

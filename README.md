@@ -39,12 +39,48 @@ remember through spaced review — with a friendly animated 3D assistant alongsi
 
 ## Development status
 
-**Phase 7 — Moti Mirror teach-back (current).** The learning loop is now real:
-**Think → Explain → Correct → Remember**. Pick a grounded answer, choose
-**"Teach it back"**, explain the concept in your own words, and Moti coaches your
-explanation against *only* that answer's sources.
+**Phase 8 — adaptive micro-challenges (current).** Pick a grounded answer, choose
+**"Challenge me"**, and Moti sets a focused practice task built only from that
+answer's sources — then marks your response and celebrates a genuine win.
 
 What works in this phase:
+
+- **Four challenge types** — multiple choice, scenario, correct the mistake, and
+  explain in your own words. Or pick **Surprise me** and let Moti choose.
+- **Difficulty** — Recommended (your configured level), Beginner, Intermediate, or
+  Advanced. It shapes how the challenge is *written*; it is not a measure of your
+  ability, and the UI says so.
+- **Marking that fits the question** — multiple-choice and scenario answers are
+  marked **deterministically on the server with no AI call** (comparing two option
+  ids needs no model); free-text answers are marked by Gemini against the reference
+  answer, essential points, and sources.
+- **Two attempts, with a real hint** — a first wrong answer earns a targeted nudge
+  and a Retry *without* revealing the answer; the second reveals the full grounded
+  explanation and points you at the source. You can reveal the answer early, but
+  that ends the challenge without a win.
+- **Moti celebrates** — the `celebrating` state is finally earned, and **only** by a
+  validated correct answer. A new request or an error interrupts it immediately; a
+  wrong answer never celebrates.
+- **Honest boundaries** — *"This recommendation has not yet changed your Mastery
+  Journey"* and *"This review prompt is not saved or scheduled yet."* Neither the
+  Mastery Journey nor the Memory Echo queue is mutated.
+- **Automated tests** (Vitest, **320 total**) — request and challenge validation,
+  prompt layering and injection containment, the deterministic marking rules, the
+  attempt policy, the activity state machine, and celebrating-state combination.
+  **No test calls the real API.**
+
+> Limitations: this is a **learning prototype, not a secure exam**. The answer key
+> is held in client state between generating and marking, so a technically
+> knowledgeable learner could inspect it — real assessment would need server-side
+> challenge sessions. There is no grading, score, or ability measurement, and
+> challenge results are in-memory only.
+
+<details>
+<summary><strong>Phase 7 — Moti Mirror teach-back (complete)</strong></summary>
+
+The learning loop is real: **Think → Explain → Correct → Remember**. Pick a
+grounded answer, choose **"Teach it back"**, explain the concept in your own words,
+and Moti coaches your explanation against *only* that answer's sources.
 
 - **A real teach-back activity** — inline, anchored to the answer it belongs to.
   Moti asks you to explain the concept; you write it in your own words.
@@ -144,6 +180,7 @@ What works in this phase:
 
 </details>
 </details>
+</details>
 
 ### AI configuration
 
@@ -159,7 +196,14 @@ What works in this phase:
   runs without it; the conversation reports *"AI conversation is not configured"*
   until one is set.
 
-### Privacy boundary (changed in Phase 5, extended in Phase 7)
+### Privacy boundary (changed in Phase 5, extended in Phases 7–8)
+
+When you take a challenge, the selected concept, your challenge response, your
+course configuration, and up to four supporting source excerpts may be sent to the
+configured Gemini API — again **without** your conversation history. Multiple-choice
+and scenario answers are marked deterministically on the server and are **not** sent
+to Gemini at all.
+
 
 Phases 3–4 were fully local. Now, **when you send a message**, your question,
 recent conversation, and up to four relevant source excerpts are sent to the
@@ -186,18 +230,21 @@ the configured Gemini account and terms.
   (≤1,500 chars each, ≤6,000 total). Server timeout **45s**.
 - Teach-back caps: concept **150 chars**, explanation **15–1,200 chars**, sources
   **1–4** (same size caps, and **no** history). Same **45s** timeout.
-- The `POST /api/chat` and `POST /api/teach-back` endpoints are public and
-  unauthenticated; a production deployment would need server-side rate limiting and
-  auth. No third-party rate-limiter is added in this phase.
+- Challenge caps: concept **150 chars**, written answer **5–1,200 chars**, sources
+  **1–4**, **2 attempts** per challenge, exactly **4** options for choice types.
+  Same **45s** timeout.
+- The `POST /api/chat`, `POST /api/teach-back`, and both `POST /api/challenge/*`
+  endpoints are public and unauthenticated; a production deployment would need
+  authentication, server-side rate limiting, protected assessment state, and secure
+  challenge sessions. None are added in this prototype.
 
 ### Not connected yet (later phases)
 
-- **No** quizzes or adaptive challenges (Phase 8) — so Moti's `celebrating` state
-  is still not triggered by app behaviour.
 - **No** Mastery Journey updates and **no** Memory Echo scheduling (Phase 9). Moti
-  Mirror produces a mastery *recommendation* and a recall *preview* only; neither
-  changes tracked state.
-- Conversation history and teach-back results are **not** persisted across reloads.
+  Mirror and micro-challenges produce a mastery *recommendation* and a recall
+  *preview* only; neither changes tracked state.
+- Conversation history, teach-back feedback, and challenge results are **not**
+  persisted across reloads, and there is no challenge history.
 
 See [`docs/development-plan.md`](docs/development-plan.md) for the full phase plan.
 

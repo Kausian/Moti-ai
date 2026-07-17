@@ -7,6 +7,7 @@ import type {
 } from "@/lib/types";
 import { IconSource, IconSparkles } from "@/components/ui/icons";
 import { isTeachBackEligible } from "@/lib/mirror/eligibility";
+import { isChallengeEligible } from "@/lib/challenge/eligibility";
 import { LearningActions } from "./LearningActions";
 
 const MODE_LABEL: Record<MotiResponseMode, string> = {
@@ -21,12 +22,17 @@ interface ChatMessageItemProps {
   disabled: boolean;
   /** True when this answer's Moti Mirror activity is already open. */
   teachBackOpen: boolean;
-  /** True when another answer's activity is open — only one may be active. */
+  /** True when any other learning activity is open — only one may be active. */
   teachBackBlocked: boolean;
+  /** True when this answer's challenge activity is already open. */
+  challengeOpen: boolean;
+  /** True when any other learning activity is open — only one may be active. */
+  challengeBlocked: boolean;
   onExplainSimply: () => void;
   onGiveExample: () => void;
   onAskFollowUp: () => void;
   onTeachBack: () => void;
+  onChallenge: () => void;
   onPreviewSource: (source: ConversationSource) => void;
 }
 
@@ -50,10 +56,13 @@ export function ChatMessageItem({
   disabled,
   teachBackOpen,
   teachBackBlocked,
+  challengeOpen,
+  challengeBlocked,
   onExplainSimply,
   onGiveExample,
   onAskFollowUp,
   onTeachBack,
+  onChallenge,
   onPreviewSource,
 }: ChatMessageItemProps) {
   if (message.role === "user") {
@@ -68,9 +77,10 @@ export function ChatMessageItem({
 
   const isSending = message.status === "sending";
   const sources = message.sources ?? [];
-  // Teach-back needs a completed, grounded answer with at least one validated
+  // Both activities need a completed, grounded answer with at least one validated
   // source — never a pending, failed, unsourced, or non-grounded response.
   const canTeachBack = isTeachBackEligible(message);
+  const canChallenge = isChallengeEligible(message);
 
   return (
     <div className="flex gap-2.5">
@@ -122,7 +132,7 @@ export function ChatMessageItem({
           </div>
         )}
 
-        {!isSending && (message.suggestedActions || canTeachBack) && (
+        {!isSending && (message.suggestedActions || canTeachBack || canChallenge) && (
           <LearningActions
             actions={message.suggestedActions ?? []}
             hasSources={sources.length > 0}
@@ -130,6 +140,9 @@ export function ChatMessageItem({
             canTeachBack={canTeachBack}
             teachBackOpen={teachBackOpen}
             teachBackBlocked={teachBackBlocked}
+            canChallenge={canChallenge}
+            challengeOpen={challengeOpen}
+            challengeBlocked={challengeBlocked}
             onExplainSimply={onExplainSimply}
             onGiveExample={onGiveExample}
             onShowSource={() => {
@@ -137,6 +150,7 @@ export function ChatMessageItem({
             }}
             onAskFollowUp={onAskFollowUp}
             onTeachBack={onTeachBack}
+            onChallenge={onChallenge}
           />
         )}
       </div>
