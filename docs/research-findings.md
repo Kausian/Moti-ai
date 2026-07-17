@@ -307,6 +307,33 @@ rule, the teach-back loop, and visible mastery tracking.
   is a breaking Next downgrade, so it is **deferred, not force-fixed** (build-time
   only, not a runtime surface).
 
+## Final UI polish & accessibility decisions (Phase 12)
+
+- **Semantic tokens layered over the brand palette, not a rename.** Adding
+  role-named tokens (`--surface-*`, `--text-*`, `--status-*`, …) over the existing
+  `--moti-*` palette gives new work a consistent vocabulary without a risky
+  rename of 60 components that already depend on the brand tokens. Nothing was
+  broken; the palette direction (navy / ivory / peach / pink / yellow) is unchanged.
+- **A few shared primitives, not a component framework.** `Button`, `SectionHeader`,
+  `InlineNotice`, and `EmptyState` remove real duplication; the button variant logic
+  is a pure, unit-tested function. This deliberately stops short of a heavyweight
+  design-system package the prototype does not need.
+- **Status in text, colour as reinforcement.** Every status (mastery, AI
+  availability, outcomes, notices) pairs an icon and/or text with colour, so meaning
+  survives colour-blindness and greyscale screenshots. No confetti; celebration
+  stays a static positive avatar state.
+- **Reduced motion in two layers.** The JS `useReducedMotion` hook drives the 3D
+  scene, and a global CSS block neutralises incidental transitions and smooth
+  scrolling — belt-and-braces, so no essential information depends on movement.
+- **Custom 3D model deferred, honestly.** No legally-clean local GLB was available,
+  so the procedural Moti ships. The avatar keeps a clean fallback chain (GLB →
+  procedural → 2D) ready for a future asset; the prototype does not pretend a model
+  exists or fetch a remote one.
+- **Verified, not asserted.** Responsive (no overflow 320–1440px), one-Canvas,
+  keyboard reachability, focus restoration, dialog-above-Canvas stacking, and
+  reduced-motion status text are checked by Playwright against the running app with
+  AI mocked — objective evidence rather than pixel snapshots.
+
 ## Limitations
 
 - No formal user study underlies these findings; they are reasoned from

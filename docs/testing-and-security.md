@@ -222,9 +222,9 @@ Handler `request.signal` → combined with a 45s `AbortSignal.timeout` via
 
 | Suite | What it covers |
 | --- | --- |
-| **Unit (Vitest, 474)** | Chunking, retrieval, prompt building + injection containment, response validation, mastery/review policy, storage validation & migration, the reducer, the `processedActivityIds` cap, the shared HTTP reader, and the security-header config. |
-| **Route-level (Vitest, in the 474)** | Each AI route: 415 / 413 / 400 / no-store / not-configured / GET-unsupported / validation / cancellation / timeout / safe provider-error mapping — with Gemini mocked. |
-| **E2E (Playwright, 3)** | App smoke (workspace present, ≤1 canvas, security headers, no page error), grounded chat happy path (consent → single answer), and error recovery (safe error, input preserved, no fake answer). AI routes are intercepted with fixtures — **no real Gemini call.** |
+| **Unit (Vitest, 481)** | Chunking, retrieval, prompt building + injection containment, response validation, mastery/review policy, storage validation & migration, the reducer, the `processedActivityIds` cap, the shared HTTP reader, the security-header config, and the `button-styles` variant util. |
+| **Route-level (Vitest, in the 481)** | Each AI route: 415 / 413 / 400 / no-store / not-configured / GET-unsupported / validation / cancellation / timeout / safe provider-error mapping — with Gemini mocked. |
+| **E2E (Playwright, 9)** | App smoke (workspace present, ≤1 canvas, security headers, no page error), grounded chat (consent → single answer), error recovery (safe error, input preserved, no fake answer), and responsive/accessibility (no horizontal overflow across 320–1440px, one Canvas, mobile panel switching keeps the composer draft, keyboard reachability, Settings focus-trap + restoration, source preview above the Canvas, reduced-motion keeps status text). AI routes are intercepted with fixtures — **no real Gemini call.** |
 
 **No automated test — unit, route, or E2E — calls the real Gemini API.** Route
 tests mock the generation boundary via `vi.mock`; E2E tests intercept `/api/**`

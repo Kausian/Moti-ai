@@ -483,6 +483,51 @@ injection mitigated not solved, localStorage not encrypted, no CSP yet).
 
 ---
 
+## Phase 12 — final UI polish, accessibility & 3D readiness (current)
+
+**Goal:** make Moti AI feel calm, coherent, and submission-ready. **No new
+learning features; no change to the learning architecture, persistence policy, or
+Phase 11 security behaviour.**
+
+**Deliverables**
+- A semantic design-token layer in `globals.css` (role-named surface/text/border/
+  status/focus/shadow/radius/transition/content-width tokens) layered over the
+  existing `--moti-*` brand palette, exposed as Tailwind utilities.
+- Shared UI primitives (`src/components/ui/`): `Button` (+ pure `button-styles`
+  util), `SectionHeader`, `InlineNotice`, `EmptyState`, adopted where duplication
+  was real.
+- Header AI-status pill (availability by dot **and** text; model name stays out of
+  the normal UI).
+- Readability/consistency pass: comfortable line-height for long answers, wrapped
+  long titles, clearer mobile active tab, larger touch targets.
+- Hardened reduced-motion CSS (neutralises decorative motion, transitions, smooth
+  scroll) on top of the JS hook.
+- 6 new Playwright regression checks (responsive/overflow across 320–1440px, one
+  Canvas, mobile panel switching, keyboard reachability, Settings focus-trap +
+  restoration, source preview above Canvas, reduced-motion status text).
+
+**Custom 3D model:** **intentionally deferred.** The procedural Moti is retained;
+the architecture supports a future local `public/models/moti.glb` (GLB → procedural
+→ 2D fallback), but no asset was bundled and visual-asset replacement was not
+allowed to delay completion.
+
+**Explicitly out of scope:** Learning Constellation, new AI routes/activities/
+challenge types, new mastery/review algorithms, auth, cloud storage, analytics,
+notifications, service workers, gamification, a marketing site, a full redesign, or
+any Gemini-model change (`gemini-3.1-flash-lite` stays).
+
+**Validation:** `npm test` (481 unit + route), `npm run test:e2e` (9 Playwright),
+`npm run lint`, `npm run build` all pass; **no automated test calls real Gemini**;
+one Canvas; no horizontal overflow at 375px; keyboard + reduced-motion verified;
+Phase 11 security behaviour unchanged.
+
+**Definition of done:** the visual system is internally consistent; layout is
+polished at desktop/tablet/mobile with no 375px overflow; focus management,
+contrast, and non-colour-only status hold; reduced motion works; screenshot-ready
+views are verified; custom-model status is documented honestly.
+
+---
+
 ## Cross-phase risks
 
 - **Free-tier AI limits** may throttle demos — keep requests lean.

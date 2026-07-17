@@ -2,6 +2,7 @@ import type { LoopStage, MotiVisualState } from "@/lib/types";
 import { VISUAL_STATE_TEXT } from "@/lib/avatar/state-mapping";
 import { MotiAvatar } from "./MotiAvatar";
 import { IconCheck } from "@/components/ui/icons";
+import { SectionHeader } from "@/components/ui/SectionHeader";
 
 interface AssistantPanelProps {
   visualState: MotiVisualState;
@@ -47,16 +48,16 @@ export function AssistantPanel({
       </div>
 
       <div className="rounded-xl bg-gradient-to-br from-moti-pink/40 via-moti-peach/30 to-moti-yellow/40 p-3 text-center">
-        <p className="text-[11px] font-medium uppercase tracking-wide text-moti-navy-soft">
+        <p className="text-[11px] font-semibold uppercase tracking-wide text-moti-navy-soft">
           Current concept
         </p>
-        <p className="mt-0.5 text-sm font-semibold text-moti-navy">{concept}</p>
+        <p className="mt-0.5 text-sm font-semibold break-words text-moti-navy">
+          {concept}
+        </p>
       </div>
 
       <div>
-        <p className="mb-2 text-[11px] font-medium uppercase tracking-wide text-moti-navy-soft">
-          Learning loop
-        </p>
+        <SectionHeader eyebrow="Learning loop" className="mb-2" />
         <ol className="flex flex-col gap-1.5">
           {stages.map((stage, index) => {
             const state =

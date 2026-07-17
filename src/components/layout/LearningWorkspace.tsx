@@ -107,6 +107,7 @@ export function LearningWorkspace() {
         courseTitle={configuration.courseTitle}
         learnerLevelLabel={LEVEL_LABEL[configuration.learnerLevel]}
         descriptor={demoCourse.descriptor}
+        apiStatus={conversation.apiStatus}
         settingsOpen={settingsOpen}
         onOpenSettings={() => setSettingsOpen(true)}
       />

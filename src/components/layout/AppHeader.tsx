@@ -1,10 +1,12 @@
 import { IconBook, IconSettings, IconSignal } from "@/components/ui/icons";
 import { SETTINGS_DRAWER_ID } from "@/components/settings/SettingsDrawer";
+import type { ApiStatus } from "@/hooks/useMotiConversation";
 
 interface AppHeaderProps {
   courseTitle: string;
   learnerLevelLabel: string;
   descriptor: string;
+  apiStatus: ApiStatus;
   settingsOpen: boolean;
   onOpenSettings: () => void;
 }
@@ -18,10 +20,46 @@ function LevelPill({ label }: { label: string }) {
   );
 }
 
+// High-level AI availability, conveyed by a dot + text label (never colour alone).
+// The specific model name is intentionally not shown here (see Settings).
+const AI_STATUS: Record<ApiStatus, { label: string; dot: string; text: string }> = {
+  unknown: { label: "AI ready", dot: "bg-moti-navy-soft/50", text: "text-text-secondary" },
+  ready: { label: "AI ready", dot: "bg-status-success", text: "text-text-secondary" },
+  "not-configured": {
+    label: "AI not configured",
+    dot: "bg-status-warning",
+    text: "text-text-secondary",
+  },
+  "limit-reached": {
+    label: "Usage limit reached",
+    dot: "bg-status-warning",
+    text: "text-text-secondary",
+  },
+  unavailable: {
+    label: "AI unavailable",
+    dot: "bg-status-error",
+    text: "text-text-secondary",
+  },
+};
+
+function AiStatusPill({ status }: { status: ApiStatus }) {
+  const { label, dot, text } = AI_STATUS[status];
+  return (
+    <span
+      className={`hidden items-center gap-1.5 rounded-full border border-border-subtle bg-surface-panel px-2.5 py-1 text-xs font-medium sm:inline-flex ${text}`}
+      title={label}
+    >
+      <span aria-hidden className={`h-2 w-2 rounded-full ${dot}`} />
+      <span>{label}</span>
+    </span>
+  );
+}
+
 export function AppHeader({
   courseTitle,
   learnerLevelLabel,
   descriptor,
+  apiStatus,
   settingsOpen,
   onOpenSettings,
 }: AppHeaderProps) {
@@ -56,7 +94,8 @@ export function AppHeader({
         </div>
 
         {/* Actions */}
-        <div className="ml-auto flex shrink-0 items-center gap-1.5">
+        <div className="ml-auto flex shrink-0 items-center gap-2">
+          <AiStatusPill status={apiStatus} />
           <button
             type="button"
             onClick={onOpenSettings}

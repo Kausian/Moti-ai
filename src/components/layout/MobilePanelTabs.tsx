@@ -39,9 +39,9 @@ export function MobilePanelTabs({ active, onChange }: MobilePanelTabsProps) {
             aria-selected={selected}
             aria-controls={controls}
             onClick={() => onChange(id)}
-            className={`inline-flex flex-1 items-center justify-center gap-1.5 rounded-lg px-2 py-1.5 text-sm font-medium transition-colors ${
+            className={`inline-flex min-h-[40px] flex-1 items-center justify-center gap-1.5 rounded-lg px-2 py-1.5 text-sm font-medium transition-colors ${
               selected
-                ? "bg-moti-navy text-white"
+                ? "bg-moti-navy text-white shadow-[var(--shadow-1)]"
                 : "text-moti-navy-soft hover:bg-moti-navy/5"
             }`}
           >

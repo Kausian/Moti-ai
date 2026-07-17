@@ -167,6 +167,24 @@ away from them without an explicit decision recorded here.
   animation/physics/loader library. Reduced-motion and a 2D WebGL fallback are
   required. Brand colours used in Three.js materials are mirrored once in
   `src/lib/avatar/constants.ts` (Three.js cannot read the CSS `@theme` tokens).
+- **Design system (Phase 12)** — semantic, role-named tokens live in
+  `src/app/globals.css` (`--surface-*`, `--text-*`, `--border-*`, `--status-*`,
+  `--focus-ring`, `--shadow-1/2`, radius/transition/content-width) **layered over**
+  the existing `--moti-*` brand palette; do **not** rename or remove the `--moti-*`
+  tokens (many components depend on them). Prefer the semantic Tailwind utilities
+  (`text-text-secondary`, `bg-surface-panel`, `border-border-subtle`,
+  `bg-status-*`) for new work. Shared UI primitives live in `src/components/ui/`
+  (`Button`/`button-styles`, `SectionHeader`, `InlineNotice`, `EmptyState`); reach
+  for these instead of re-inlining a button or notice. **Never** use a clickable
+  `div` — use `Button`. Reduced motion is handled by **both** the `useReducedMotion`
+  hook and a global `prefers-reduced-motion` CSS block; state must always be
+  conveyed by **text**, never colour or motion alone.
+- **Custom 3D model (Phase 12) is intentionally deferred.** The submission uses the
+  procedural Moti. A future local `public/models/moti.glb` may be integrated via
+  Three.js `GLTFLoader` (no drei) with the fallback chain **GLB → procedural Moti →
+  2D fallback**, preserving one Canvas, no-SSR code split, the error boundary, and
+  reduced motion. Do **not** add a placeholder pretending the asset exists, and do
+  **not** use a remote model/texture URL.
 
 ### Direction for later phases (not yet installed)
 

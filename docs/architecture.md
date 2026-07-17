@@ -876,17 +876,51 @@ src/
                           #   (+ combineAvatarSignals), animation-config
                           #   (pure, no three import → WebGL-free tests)
 
-# Automated tests (Vitest, dev-only, 474): co-located *.test.ts under lib/chunking,
-# lib/retrieval, lib/chat, lib/ai, lib/http, lib/mirror, lib/challenge, lib/progress,
-# lib/storage, lib/avatar, and app/api/*/route.test.ts (route handlers with Gemini
-# mocked); run with `npm test`. No test calls the real Gemini API and no test
-# creates a WebGL context — the generation, mapping, policy, progress, HTTP, and
-# activity-state boundaries are pure/mockable (time is injected).
+#   ui/                   # icons + shared primitives (Phase 12): Button/button-styles,
+#                         #   SectionHeader, InlineNotice, EmptyState, MasteryBadge,
+#                         #   PlainTextPreviewDialog
 #
-# End-to-end (Playwright, dev-only, 3): tests/e2e/*.spec.ts — app smoke, grounded
-# chat, error recovery. `npm run test:e2e` starts the dev server and intercepts
-# every /api/** call with fixtures, so no E2E test calls the real Gemini API.
+# Automated tests (Vitest, dev-only, 481): co-located *.test.ts under lib/chunking,
+# lib/retrieval, lib/chat, lib/ai, lib/http, lib/mirror, lib/challenge, lib/progress,
+# lib/storage, lib/avatar, components/ui (button-styles), and app/api/*/route.test.ts
+# (route handlers with Gemini mocked); run with `npm test`. No test calls the real
+# Gemini API and no test creates a WebGL context — the generation, mapping, policy,
+# progress, HTTP, and style boundaries are pure/mockable (time is injected).
+#
+# End-to-end (Playwright, dev-only, 9): tests/e2e/*.spec.ts — app smoke, grounded
+# chat, error recovery, and responsive/accessibility (overflow across 320–1440px,
+# one Canvas, mobile panel switching, keyboard reachability, Settings focus
+# restoration, source preview above Canvas, reduced-motion status text).
+# `npm run test:e2e` starts the dev server and intercepts every /api/** call with
+# fixtures, so no E2E test calls the real Gemini API.
 ```
+
+## Visual system (Phase 12)
+
+The interface is styled entirely with Tailwind v4 utilities over tokens defined in
+`src/app/globals.css`. Phase 12 added a **semantic token layer** — role-named
+custom properties (`--surface-*`, `--text-*`, `--border-*`, `--status-*`,
+`--focus-ring`, `--shadow-1/2`, radius/transition/content-width) — layered over the
+original `--moti-*` brand palette and registered in `@theme` so they surface as
+utilities (`bg-surface-panel`, `text-text-secondary`, `border-border-subtle`,
+`bg-status-*`). The `--moti-*` tokens are retained unchanged; nothing was renamed.
+
+Shared primitives live in `src/components/ui/`: `Button` (with the pure,
+unit-tested `button-styles` util — variants primary/secondary/ghost/destructive,
+comfortable touch targets, visible focus, no-shift loading), `SectionHeader`,
+`InlineNotice` (tone by icon + text, never colour alone), and `EmptyState`. Status
+is always conveyed in **text**; colour and motion only reinforce it.
+
+Reduced motion is handled in two layers: the `useReducedMotion` hook (for the 3D
+scene) and a global `@media (prefers-reduced-motion: reduce)` block that neutralises
+decorative animations, incidental transitions, and smooth scrolling.
+
+**Custom 3D model — deferred.** The submission uses the procedural Moti. The avatar
+architecture supports a future local `public/models/moti.glb` via Three.js
+`GLTFLoader` (no drei) with the fallback chain **GLB → procedural Moti → 2D
+fallback**, preserving one Canvas, the no-SSR code split, `MotiAvatarErrorBoundary`,
+and reduced motion. No model asset is bundled, and no remote model/texture URL is
+used.
 
 _Moti Mirror reuses `lib/ai/error-mapping.ts` rather than adding a parallel
 `lib/mirror/error-mapping.ts`: the safe provider-error categories are identical,

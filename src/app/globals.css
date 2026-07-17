@@ -26,6 +26,54 @@
   /* Semantic feedback colours (used for validation + storage errors). */
   --moti-danger: #b3261e;
   --moti-danger-bg: #fbe9e7;
+
+  /* ---------------------------------------------------------------------
+     Semantic design tokens (Phase 12).
+     These are aliases over the brand palette above, named by ROLE rather
+     than by colour, so components can express intent ("panel surface",
+     "secondary text") consistently. The brand --moti-* tokens are kept so
+     existing utilities keep working; new work should prefer these.
+     --------------------------------------------------------------------- */
+  --surface-page: var(--background);
+  --surface-panel: var(--moti-surface);
+  --surface-elevated: #ffffff;
+  --surface-muted: #fbf3ec; /* warm inset, e.g. eyebrow chips */
+
+  --text-primary: var(--moti-navy);
+  --text-secondary: var(--moti-navy-soft);
+  --text-muted: #6b7392; /* lighter than secondary, still AA on ivory */
+
+  --border-subtle: var(--moti-line);
+  --border-strong: #d9c6b6;
+
+  --accent-primary: var(--moti-navy);
+  --accent-peach: var(--moti-peach);
+  --accent-pink: var(--moti-pink);
+  --accent-yellow: var(--moti-yellow);
+
+  --status-success: var(--moti-understood);
+  --status-success-bg: var(--moti-understood-bg);
+  --status-warning: var(--moti-exploring);
+  --status-warning-bg: var(--moti-exploring-bg);
+  --status-error: var(--moti-danger);
+  --status-error-bg: var(--moti-danger-bg);
+  --status-info: var(--moti-developing);
+  --status-info-bg: var(--moti-developing-bg);
+
+  --focus-ring: var(--moti-navy);
+
+  /* Elevation — two restrained levels only (no heavy stacked shadows). */
+  --shadow-1: 0 1px 2px rgba(23, 32, 58, 0.06), 0 1px 3px rgba(23, 32, 58, 0.05);
+  --shadow-2: 0 4px 14px rgba(23, 32, 58, 0.1);
+
+  /* Radii, spacing rhythm, timing, content width. */
+  --radius-sm: 0.5rem;
+  --radius-md: 0.75rem;
+  --radius-lg: 1rem;
+  --radius-pill: 9999px;
+  --transition-fast: 120ms ease;
+  --transition-base: 180ms ease;
+  --content-max: 1400px;
 }
 
 @theme inline {
@@ -46,6 +94,29 @@
   --color-moti-understood-bg: var(--moti-understood-bg);
   --color-moti-danger: var(--moti-danger);
   --color-moti-danger-bg: var(--moti-danger-bg);
+
+  /* Semantic role tokens exposed as Tailwind utilities (Phase 12). */
+  --color-surface-page: var(--surface-page);
+  --color-surface-panel: var(--surface-panel);
+  --color-surface-elevated: var(--surface-elevated);
+  --color-surface-muted: var(--surface-muted);
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-muted: var(--text-muted);
+  --color-border-subtle: var(--border-subtle);
+  --color-border-strong: var(--border-strong);
+  --color-status-success: var(--status-success);
+  --color-status-success-bg: var(--status-success-bg);
+  --color-status-warning: var(--status-warning);
+  --color-status-warning-bg: var(--status-warning-bg);
+  --color-status-error: var(--status-error);
+  --color-status-error-bg: var(--status-error-bg);
+  --color-status-info: var(--status-info);
+  --color-status-info-bg: var(--status-info-bg);
+
+  --shadow-card: var(--shadow-1);
+  --shadow-elevated: var(--shadow-2);
+
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
@@ -54,13 +125,27 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+  /* Comfortable defaults for long-form AI answers and crisp text in screenshots. */
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
 /* Keyboard focus is always clearly visible and brand-toned. */
 :focus-visible {
-  outline: 2px solid var(--moti-navy);
+  outline: 2px solid var(--focus-ring);
   outline-offset: 2px;
   border-radius: 8px;
+}
+
+/* Long-form assistant answers get slightly looser leading for readability,
+   including at mobile width. Applied via a utility, not globally, so compact
+   metadata stays tight. */
+.prose-answer {
+  line-height: 1.65;
+}
+.prose-answer :is(p, li) {
+  overflow-wrap: anywhere;
 }
 
 /* Responsive learning-workspace grid.
@@ -154,10 +239,22 @@ body {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  /* Stop named decorative animations… */
   .moti-rise,
   .moti-float,
   .moti-halo,
   .status-dot-pulse {
     animation: none;
+  }
+  /* …and, as a shared safety net, neutralise incidental motion everywhere so no
+     essential information depends on a transition or smooth scroll. Functionality
+     is unchanged; only the movement is removed. */
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
   }
 }

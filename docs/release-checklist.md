@@ -154,3 +154,7 @@ Set a real `GEMINI_API_KEY` in `.env.local`, keep the model at
 - [ ] README setup works from a clean clone.
 - [ ] Playwright artifacts (`test-results/`, `playwright-report/`,
       `playwright/.cache/`) and browser binaries are git-ignored and uncommitted.
+- [ ] Custom-model status is documented honestly: the submission uses the
+      procedural Moti; no `public/models/moti.glb` is bundled and no remote
+      model/texture URL is requested (verify one Canvas + no external 3D asset in
+      the Network tab).

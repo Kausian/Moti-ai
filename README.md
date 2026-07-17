@@ -39,11 +39,56 @@ remember through spaced review — with a friendly animated 3D assistant alongsi
 
 ## Development status
 
-**Phase 11 — reliability, security hardening & final regression (current).** No new
-learning features — this phase makes the existing prototype sturdier and tests it
-against malformed, oversized, adversarial, and failing conditions.
+**Phase 12 — final UI polish, accessibility & 3D readiness (current).** No new
+learning features and no change to the learning architecture, persistence, or
+security — this phase makes the product feel calm, coherent, and submission-ready.
 
 What this phase adds:
+
+- **A semantic design-token layer** in `globals.css` — role-named tokens
+  (`--surface-*`, `--text-*`, `--border-*`, `--status-*`, `--focus-ring`, shadow,
+  radius, transition, and content-width tokens) layered over the existing warm
+  brand palette (nothing renamed, nothing broken), exposed as Tailwind utilities.
+- **Shared UI primitives** (`src/components/ui/`) — `Button` (primary / secondary /
+  ghost / destructive, comfortable touch targets, visible focus, no-shift loading),
+  `SectionHeader`, `InlineNotice` (tone by icon + text, not colour alone), and
+  `EmptyState` — adopted where duplication was real.
+- **A header AI-status pill** — high-level availability (AI ready / not configured /
+  usage limit / unavailable) by dot **and** text; the model name stays out of the
+  normal UI.
+- **Readability & consistency** — comfortable base line-height for long answers,
+  consistent eyebrow labels, wrapped long concept/source titles, clearer mobile
+  active tab, and larger touch targets.
+- **Hardened reduced-motion** — a shared CSS strategy neutralises decorative motion,
+  transitions, and smooth scrolling under `prefers-reduced-motion`, on top of the
+  existing JS hook. Celebration stays a static positive avatar state.
+- **3D readiness** — the avatar keeps one Canvas, its no-SSR code split, the
+  error boundary, and the 2D fallback. **The submission uses the procedural 3D Moti
+  assistant; a local GLB replacement is documented as a deferred optional step**
+  (no such asset is bundled — see below).
+- **Accessibility & responsive regression** — 6 new Playwright checks (no
+  horizontal overflow across 320–1440px, one Canvas, mobile panel switching keeps
+  the composer draft, keyboard reachability, Settings focus-trap + restoration,
+  source preview above the Canvas, reduced-motion keeps status text). **9 E2E total.**
+- **Automated tests** — **481 Vitest** (unit + route) and **9 Playwright** E2E.
+  **No test calls the real Gemini API.**
+
+> **Custom 3D model:** The submission currently uses the procedural 3D Moti
+> assistant. The avatar architecture supports a future local
+> `public/models/moti.glb` replacement (GLTFLoader → procedural Moti → 2D fallback),
+> but visual-asset replacement was intentionally not allowed to delay product
+> completion, and no model was bundled.
+
+> Phase 10 (Learning Constellation) was **intentionally skipped**; Phase 13 handles
+> deployment & submission.
+
+<details>
+<summary><strong>Phase 11 — reliability & security hardening (complete)</strong></summary>
+
+No new learning features — this phase makes the existing prototype sturdier and
+tests it against malformed, oversized, adversarial, and failing conditions.
+
+What this phase added:
 
 - **One shared, bounded JSON reader** (`src/lib/http/`) for every AI route, with
   proper HTTP status codes: **415** for a wrong/missing content type, **413** for
@@ -75,8 +120,7 @@ authoritative, prompt injection is **mitigated not solved**, and localStorage is
 **not encrypted**. See [`docs/testing-and-security.md`](docs/testing-and-security.md)
 and [`docs/release-checklist.md`](docs/release-checklist.md).
 
-> Phase 10 (Learning Constellation) was **intentionally skipped**; Phase 12 handles
-> final visual polish and accessibility, Phase 13 handles deployment.
+</details>
 
 <details>
 <summary><strong>Phase 9 — persisted Mastery Journey & Memory Echo (complete)</strong></summary>

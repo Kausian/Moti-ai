@@ -5,7 +5,7 @@ import { IconInfo } from "@/components/ui/icons";
 // which sends the concept and the learner's explanation (but no chat history).
 export function AiPrivacyNotice() {
   return (
-    <div className="flex items-start gap-2 rounded-lg border border-moti-line bg-moti-navy/[0.03] px-3 py-2 text-[11px] leading-4 text-moti-navy-soft">
+    <div className="flex items-start gap-2 rounded-lg border border-border-subtle bg-surface-muted/60 px-3 py-2 text-[11px] leading-5 text-text-secondary">
       <IconInfo className="mt-0.5 h-3.5 w-3.5 shrink-0" />
       <p>
         When you send a message, your question, recent conversation and up to four
