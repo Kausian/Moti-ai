@@ -2,7 +2,10 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { ConversationSource } from "@/lib/types";
-import { useMotiConversation, type ApiStatus } from "@/hooks/useMotiConversation";
+import type {
+  ApiStatus,
+  UseMotiConversationResult,
+} from "@/hooks/useMotiConversation";
 import {
   PlainTextPreviewDialog,
   type PreviewContent,
@@ -32,8 +35,17 @@ function sourceToPreview(source: ConversationSource): PreviewContent {
   };
 }
 
-export function ConversationPanel() {
-  const conversation = useMotiConversation();
+interface ConversationPanelProps {
+  /** The shared conversation state, owned by the workspace so Moti can react to it. */
+  conversation: UseMotiConversationResult;
+  /** Reports whether the learner is actively composing (drives Moti's listening state). */
+  onComposerActiveChange?: (active: boolean) => void;
+}
+
+export function ConversationPanel({
+  conversation,
+  onComposerActiveChange,
+}: ConversationPanelProps) {
   const {
     messages,
     isPending,
@@ -148,6 +160,7 @@ export function ConversationPanel() {
           onSend={handleSend}
           onCancel={cancel}
           isPending={isPending}
+          onActiveChange={onComposerActiveChange}
         />
         <p className="px-1 text-[11px] text-moti-navy-soft">
           Coming in a later phase: Challenge me · Teach it back.

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { AppHeader } from "./AppHeader";
 import { MobilePanelTabs, type WorkspacePanel } from "./MobilePanelTabs";
 import { AssistantPanel } from "@/components/assistant/AssistantPanel";
@@ -8,6 +8,8 @@ import { ConversationPanel } from "@/components/chat/ConversationPanel";
 import { JourneyPanel } from "@/components/learning/JourneyPanel";
 import { SettingsDrawer } from "@/components/settings/SettingsDrawer";
 import { useCourseConfiguration } from "@/hooks/useCourseConfiguration";
+import { useMotiConversation } from "@/hooks/useMotiConversation";
+import { useMotiVisualState } from "@/hooks/useMotiVisualState";
 import type { LearnerLevel } from "@/lib/types";
 import {
   LOOP_STAGES,
@@ -29,6 +31,26 @@ export function LearningWorkspace() {
   const { configuration } = useCourseConfiguration();
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [activePanel, setActivePanel] = useState<WorkspacePanel>("conversation");
+
+  // The conversation is owned here so both the conversation panel and the 3D
+  // Moti assistant read one source of truth; Moti's visual state is derived from
+  // real conversation behaviour (pending / error / new answer / composing).
+  const conversation = useMotiConversation();
+  const [composerActive, setComposerActive] = useState(false);
+  const answerCount = useMemo(
+    () =>
+      conversation.messages.filter(
+        (message) => message.role === "assistant" && message.status === "complete",
+      ).length,
+    [conversation.messages],
+  );
+  const visualState = useMotiVisualState({
+    requestPending: conversation.isPending,
+    hasError: conversation.error !== null,
+    composing: composerActive,
+    answerCount,
+    hasMessages: conversation.messages.length > 0,
+  });
 
   const visibility = (panel: WorkspacePanel) =>
     activePanel === panel ? "block" : "hidden";
@@ -56,7 +78,7 @@ export function LearningWorkspace() {
             className={`area-assistant ${visibility("assistant")} md:block lg:min-h-0 lg:overflow-y-auto`}
           >
             <AssistantPanel
-              status={demoCourse.assistantStatus}
+              visualState={visualState}
               concept={demoCourse.currentConcept}
               stages={LOOP_STAGES}
               currentStage={demoCourse.currentStage}
@@ -69,7 +91,10 @@ export function LearningWorkspace() {
             aria-labelledby="tab-conversation"
             className={`area-conversation ${visibility("conversation")} md:block lg:min-h-0`}
           >
-            <ConversationPanel />
+            <ConversationPanel
+              conversation={conversation}
+              onComposerActiveChange={setComposerActive}
+            />
           </div>
 
           <div

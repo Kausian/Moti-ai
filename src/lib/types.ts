@@ -9,6 +9,20 @@ export type AssistantStatus =
   | "Explaining"
   | "Celebrating";
 
+/**
+ * The explicit visual states of the 3D Moti assistant (Phase 6). Driven by real
+ * conversation behaviour via `lib/avatar/state-mapping`, never by arbitrary
+ * strings. `celebrating` is a supported state reserved for a later
+ * challenge-success phase; the conversation mapping does not currently emit it.
+ */
+export type MotiVisualState =
+  | "idle"
+  | "listening"
+  | "thinking"
+  | "explaining"
+  | "celebrating"
+  | "error";
+
 export type MasteryStatus = "exploring" | "developing" | "understood";
 
 export type LoopStage = "Think" | "Explain" | "Correct" | "Remember";

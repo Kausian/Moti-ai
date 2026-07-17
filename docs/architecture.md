@@ -202,6 +202,77 @@ flowchart TD
 8. **Client** (`useMotiConversation`): renders the answer as plain text with the
    validated sources as clickable chips; history is kept **in memory only**.
 
+## 3D Moti assistant flow (implemented in Phase 6)
+
+The signature 3D assistant reacts to **real conversation state**. Mapping is pure
+and testable; the WebGL scene is client-only, procedural, and self-contained (no
+external asset, no network request for the scene).
+
+```mermaid
+flowchart TD
+  Conv["Conversation state\n(useMotiConversation: pending / error /\nnew answer + composer activity)"]
+  Map["Visual-state mapping\n(lib/avatar/state-mapping + useMotiVisualState)"]
+  State["MotiVisualState\n(idle / listening / thinking /\nexplaining / celebrating / error)"]
+  Canvas["Client-only R3F scene\n(next/dynamic ssr:false → MotiCanvas)"]
+  Geo["Procedural Moti geometry\n(MotiCharacter / MotiFace / MotiStateEffects)"]
+  Anim["State-specific animation\n(animation-config, damped in useFrame)"]
+
+  Conv --> Map --> State --> Canvas --> Geo --> Anim
+```
+
+```mermaid
+flowchart LR
+  NoGL["WebGL unavailable /\ncontext fails / scene throws"]
+  Boundary["MotiAvatarErrorBoundary\n+ WebGL detection"]
+  Fallback["Accessible 2D fallback\n(MotiAvatarFallback)"]
+  Keep["Conversation + workspace\nremain fully functional"]
+
+  NoGL --> Boundary --> Fallback --> Keep
+```
+
+1. **Owning the state (`LearningWorkspace`):** the conversation hook is lifted to
+   the workspace so both the conversation panel and the assistant panel read one
+   source of truth. The composer reports a "composing" signal (focused or a
+   non-empty draft) up.
+2. **Mapping (`lib/avatar/state-mapping` + `hooks/useMotiVisualState`):** a pure,
+   unit-tested priority mapping — **thinking > error > explaining > listening >
+   idle**. `useMotiVisualState` adds the only stateful piece: a short,
+   self-clearing **explaining** window after a successful answer (a new request →
+   thinking, an error → error, and a cleared conversation → idle all pre-empt it,
+   so Moti never sticks — including after a cancellation). `celebrating` is a
+   supported state reserved for a later challenge-success phase; the conversation
+   mapping never emits it.
+3. **Client-only rendering (`MotiAvatar` → `MotiCanvas`):** one React Three Fiber
+   `<Canvas>` loaded via `next/dynamic` with `ssr: false`, so no `window`/WebGL is
+   touched during server rendering. The initial server-rendered panel still shows
+   Moti's accessible status and a 2D fallback.
+4. **Procedural geometry (`MotiCharacter` / `MotiFace` / `MotiStateEffects`):**
+   Three.js primitives only (sphere / capsule / cylinder / torus / circle) — dark
+   navy core, warm ivory face, floating hands, soft platform, and a luminous
+   learning-indicator ring. No external model, texture, image, or animation asset.
+5. **Animation (`lib/avatar/animation-config`, `useFrame`):** per-state targets of
+   plain finite numbers, interpolated with frame-rate-independent damping; no
+   per-frame object allocation and no React state updated from the frame loop.
+6. **Accessibility:** the WebGL scene is decorative (`role="img"` wrapper). Moti's
+   status lives in normal HTML — a state label, a short description, and a polite
+   live-region announcement — so screen-reader users get meaningful, non-noisy
+   feedback without interacting with the canvas.
+7. **Reduced motion (`useReducedMotion`):** honours `prefers-reduced-motion` by
+   switching the frame loop to on-demand and holding static, state-distinct poses
+   (state is still conveyed by pose, indicator colour, and text — never motion
+   alone).
+8. **Fallback + resilience:** a WebGL-support check plus a dedicated error boundary
+   (`MotiAvatarErrorBoundary`) degrade to the on-brand 2D `MotiAvatarFallback`
+   (never a raw WebGL/stack-trace message); the conversation and workspace keep
+   working.
+9. **Performance:** capped DPR, low geometry, a single Canvas, and a frame loop
+   paused (via IntersectionObserver + `visibilitychange`) when the avatar is
+   offscreen (an inactive mobile panel) or the tab is hidden — so switching mobile
+   panels never creates a second WebGL context.
+
+**Current concept is still a static label** in this phase (not AI-derived);
+AI-driven concept detection is later work.
+
 ## Local persistence strategy
 
 - **Store:** browser `localStorage`, accessed through a single typed module
@@ -258,7 +329,7 @@ flowchart TD
 ## Planned module structure
 
 ```
-# Present structure (through Phase 5 — Gemini-grounded conversation)
+# Present structure (through Phase 6 — interactive 3D Moti assistant)
 src/
   app/
     layout.tsx            # root layout, fonts, metadata
@@ -267,7 +338,9 @@ src/
     api/chat/route.ts     # POST-only Gemini route handler (Node runtime)
   components/
     layout/               # AppHeader, LearningWorkspace shell, MobilePanelTabs
-    assistant/            # AssistantPanel, MotiOrb (3D placeholder)
+    assistant/            # AssistantPanel, MotiAvatar (client-only dynamic import),
+                          #   MotiCanvas, MotiCharacter, MotiFace, MotiStateEffects,
+                          #   MotiAvatarFallback, MotiAvatarErrorBoundary
     chat/                 # ConversationPanel, ChatMessage, MessageComposer,
                           #   LearningActions, SuggestedPrompts, ConversationError,
                           #   AiPrivacyNotice, AiConsentDialog
@@ -282,11 +355,13 @@ src/
     useCourseConfiguration.ts       # typed accessor for the context
     useKnowledgeIndex.ts            # memoized in-memory index (rebuilds on change)
     useMotiConversation.ts          # conversation state, send/cancel/retry/consent
+    useMotiVisualState.ts           # conversation → MotiVisualState (+ explaining window)
+    useReducedMotion.ts             # prefers-reduced-motion (useSyncExternalStore)
   data/
     demo-data.ts          # typed mock data (assistant panel, journey, echo)
     sample-course.ts      # deterministic default course + sample document
   lib/
-    types.ts              # shared TypeScript types
+    types.ts              # shared TypeScript types (incl. MotiVisualState)
     documents/            # pure ingestion (constants, validation, parse, ...)
     chunking/             # constants, split-sections, chunk-document, build-chunks
     retrieval/            # tokenize, build-index, score-chunk, retrieve-knowledge
@@ -295,16 +370,18 @@ src/
     ai/                   # constants, gemini-client, moti-system-instruction,
                           #   prompt-builder, response-schema, validate-ai-response,
                           #   error-mapping, generate-moti-response  (server-only)
+    avatar/               # constants (3D colours + durations), state-mapping,
+                          #   animation-config  (pure, no three import → WebGL-free tests)
 
 # Automated tests (Vitest, dev-only): co-located *.test.ts under lib/chunking,
-# lib/retrieval, lib/chat, and lib/ai; run with `npm test`. No test calls the
-# real Gemini API — the generation boundary is mockable.
+# lib/retrieval, lib/chat, lib/ai, and lib/avatar; run with `npm test`. No test
+# calls the real Gemini API and no test creates a WebGL context — the generation
+# and avatar-mapping boundaries are pure/mockable.
 
 # Planned additions (created in the phase that first needs them)
 src/
   app/api/
-    evaluate/route.ts     # teach-back / misconception handler (Phase 6)
-  three/                  # 3D assistant (React Three Fiber) — later phase
+    evaluate/route.ts     # teach-back / misconception handler (Phase 7)
 ```
 
 _This layout is a target. Directories are created in the phase that first needs

@@ -1,21 +1,23 @@
-import type { AssistantStatus, LoopStage } from "@/lib/types";
-import { MotiOrb } from "./MotiOrb";
-import { IconCheck, IconSparkles } from "@/components/ui/icons";
+import type { LoopStage, MotiVisualState } from "@/lib/types";
+import { VISUAL_STATE_TEXT } from "@/lib/avatar/state-mapping";
+import { MotiAvatar } from "./MotiAvatar";
+import { IconCheck } from "@/components/ui/icons";
 
 interface AssistantPanelProps {
-  status: AssistantStatus;
+  visualState: MotiVisualState;
   concept: string;
   stages: LoopStage[];
   currentStage: LoopStage;
 }
 
 export function AssistantPanel({
-  status,
+  visualState,
   concept,
   stages,
   currentStage,
 }: AssistantPanelProps) {
   const currentIndex = stages.indexOf(currentStage);
+  const { label, description, announcement } = VISUAL_STATE_TEXT[visualState];
 
   return (
     <aside
@@ -23,17 +25,25 @@ export function AssistantPanel({
       className="flex flex-col gap-5 rounded-2xl border border-moti-line bg-moti-surface p-5 shadow-sm lg:min-h-full"
     >
       <div>
-        <MotiOrb />
-        <div className="mt-3 flex flex-col items-center gap-1.5">
+        {/* The 3D scene is decorative; the accessible state lives in the HTML below. */}
+        <MotiAvatar visualState={visualState} />
+        <div className="mt-2 flex flex-col items-center gap-1.5">
           <p className="text-sm font-semibold text-moti-navy">Moti</p>
           <span className="inline-flex items-center gap-1.5 rounded-full bg-moti-navy/5 px-2.5 py-1 text-xs font-medium text-moti-navy">
             <span
               aria-hidden
               className="status-dot-pulse h-2 w-2 rounded-full bg-moti-navy"
             />
-            {status}
+            {label}
           </span>
+          <p className="text-center text-xs leading-5 text-moti-navy-soft">
+            {description}
+          </p>
         </div>
+        {/* Announce meaningful state changes to assistive tech, without noise. */}
+        <p aria-live="polite" className="sr-only">
+          {announcement}
+        </p>
       </div>
 
       <div className="rounded-xl bg-gradient-to-br from-moti-pink/40 via-moti-peach/30 to-moti-yellow/40 p-3 text-center">
@@ -94,14 +104,6 @@ export function AssistantPanel({
           })}
         </ol>
       </div>
-
-      <p className="mt-auto flex items-start gap-2 rounded-xl border border-dashed border-moti-line bg-moti-navy/[0.03] p-3 text-xs leading-5 text-moti-navy-soft">
-        <IconSparkles className="mt-0.5 h-4 w-4 shrink-0 text-moti-navy-soft" />
-        <span>
-          The interactive 3D Moti assistant arrives in a later phase. This is a
-          visual preview of its place in the workspace.
-        </span>
-      </p>
     </aside>
   );
 }

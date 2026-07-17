@@ -39,10 +39,46 @@ remember through spaced review — with a friendly animated 3D assistant alongsi
 
 ## Development status
 
-**Phase 5 — Gemini-grounded conversation (current).** The conversation panel is
-now live: ask a question, Moti retrieves the relevant source sections **locally**,
-then a secure server route sends only those excerpts to **Google Gemini** and
-returns a structured, source-grounded answer.
+**Phase 6 — interactive 3D Moti assistant (current).** The static placeholder is
+replaced by a lightweight, **procedurally modelled** 3D Moti (React Three Fiber +
+Three.js) that reacts to real conversation state.
+
+What works in this phase:
+
+- **A polished 3D character** built entirely from Three.js primitives — **no
+  external model, texture, image, or animation asset** is loaded.
+- **Six visual states** (`idle / listening / thinking / explaining / celebrating /
+  error`) driven by real conversation behaviour: **Thinking** while Gemini
+  processes, **Explaining** briefly after a successful answer, **Error** after a
+  failure, **Listening** while you compose, **Idle** otherwise. (`celebrating` is
+  implemented but reserved for a later challenge-success phase.)
+- **Client-only rendering** — one `<Canvas>` loaded via `next/dynamic` with
+  `ssr: false`; nothing touches WebGL during server rendering and the build needs
+  no browser.
+- **Accessibility** — the WebGL scene is decorative; Moti's state is exposed as
+  normal HTML (label, description, polite live-region announcement).
+- **Reduced motion** — `prefers-reduced-motion` holds static, state-distinct poses
+  and pauses continuous animation; state is never conveyed by motion alone.
+- **Graceful fallback** — an on-brand 2D Moti (behind an error boundary + WebGL
+  check) covers absent/failed WebGL; the conversation keeps working.
+- **Lightweight** — capped DPR, low geometry, a single Canvas, and a frame loop
+  paused when the avatar is offscreen or the tab is hidden.
+- **Automated tests** — the pure conversation→state mapping and animation config
+  are unit-tested (Vitest, **96 total**); no test creates a WebGL context.
+- Everything from Phases 3–5 (configuration, ingestion, retrieval, Grounding Lab,
+  and the real Gemini conversation) still works.
+
+> Known limitation: the 3D scene needs a normally-rendering browser with a working
+> `ResizeObserver`; some automated/headless preview tools throttle it and won't
+> initialize the scene, but real browsers render it. The current concept shown in
+> the panel is still a static label (not AI-derived) in this phase.
+
+<details>
+<summary><strong>Phase 5 — Gemini-grounded conversation (complete)</strong></summary>
+
+The conversation panel is live: ask a question, Moti retrieves the relevant source
+sections **locally**, then a secure server route sends only those excerpts to
+**Google Gemini** and returns a structured, source-grounded answer.
 
 What works in this phase:
 
@@ -66,6 +102,8 @@ What works in this phase:
   prompt-injection cases. **No test calls the real API.**
 - Everything from Phases 3–4 (configuration, ingestion, previews, persistence,
   and the fully-local Grounding Lab) still works.
+
+</details>
 
 ### AI configuration
 
@@ -110,8 +148,9 @@ Provider-side handling follows the configured Gemini account and terms.
 ### Not connected yet (later phases)
 
 - **No** Moti Mirror teach-back evaluation, quizzes, mastery updates, or Memory
-  Echo scheduling. The 3D assistant remains a styled placeholder. Conversation
-  history is **not** persisted across reloads.
+  Echo scheduling. The 3D Moti assistant is **live** (Phase 6) but its
+  `celebrating` state is not yet triggered by app behaviour, and the concept it
+  shows is a static label. Conversation history is **not** persisted across reloads.
 
 See [`docs/development-plan.md`](docs/development-plan.md) for the full phase plan.
 

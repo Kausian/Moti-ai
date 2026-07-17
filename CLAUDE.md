@@ -103,14 +103,22 @@ away from them without an explicit decision recorded here.
   real Gemini API for this project; `gemini-3.5-flash` returned HTTP 503 for this
   project during testing). The **`GEMINI_API_KEY`** is server-only: never
   `NEXT_PUBLIC_`, never in a client component or the bundle.
+- **`three` 0.185.1 + `@react-three/fiber` 9.6.1** (runtime) with **`@types/three`
+  0.185.1** (dev) — the 3D Moti assistant (Phase 6). `@react-three/fiber` 9 targets
+  **React 19** (peer `react >=19 <19.3`). The scene is **client-only**: one
+  `<Canvas>` loaded via `next/dynamic` with **`ssr: false`** (no window/WebGL on the
+  server). Moti is **procedurally modelled** from Three.js primitives — **no
+  external model, texture, image, or animation asset**, and **no drei** or any
+  animation/physics/loader library. Reduced-motion and a 2D WebGL fallback are
+  required. Brand colours used in Three.js materials are mirrored once in
+  `src/lib/avatar/constants.ts` (Three.js cannot read the CSS `@theme` tokens).
 
 ### Direction for later phases (not yet installed)
 
-- **React Three Fiber + Three.js** for the 3D assistant (later phase).
 - **Vercel** for deployment.
 
-Feature-specific dependencies (R3F, Three.js, etc.) are introduced **only in the
-phase that uses them** — never earlier.
+Feature-specific dependencies are introduced **only in the phase that uses
+them** — never earlier.
 
 ## 7. Architecture principles
 

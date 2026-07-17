@@ -212,14 +212,64 @@ Echo scheduling, 3D — and conversation history is not persisted across reloads
 
 ---
 
-## Phase 6 — Active-learning loop (Think → Explain → Correct)
+## Phase 6 — Interactive 3D Moti assistant _(complete)_
+
+**Goal:** replace the static placeholder with a lightweight, procedurally
+modelled 3D Moti that reacts to real conversation state. The signature 3D
+assistant was brought forward (ahead of the teach-back loop) because Phase 5
+already provides the states it needs to reflect (pending / error / new answer /
+composing); the challenge-success `celebrating` state is implemented but reserved
+for the later active-learning phase.
+
+**Deliverables (built)**
+- Procedural Moti character (`components/assistant/MotiCharacter` + `MotiFace` +
+  `MotiStateEffects`) from Three.js primitives only — **no external model,
+  texture, image, or animation asset**. Dark-navy core, warm ivory face, floating
+  hands, soft platform, and a luminous learning-indicator ring.
+- Six explicit visual states (`MotiVisualState`: idle / listening / thinking /
+  explaining / celebrating / error) with per-state animation targets
+  (`lib/avatar/animation-config`) interpolated with frame-rate-independent damping.
+- **Client-only** React Three Fiber scene: one `<Canvas>` loaded via
+  `next/dynamic` with `ssr: false` (`MotiAvatar` → `MotiCanvas`); no window/WebGL
+  access during server rendering.
+- Conversation → visual-state mapping (`lib/avatar/state-mapping`, priority
+  thinking > error > explaining > listening > idle) driven by the real hook state,
+  with a short self-clearing explaining window (`useMotiVisualState`).
+- Accessibility: the WebGL scene is decorative; the current state is exposed as
+  normal HTML (state label, description, and a polite live-region announcement).
+- `prefers-reduced-motion` support (`useReducedMotion`, on-demand frame loop +
+  static poses) and an on-brand 2D fallback (`MotiAvatarFallback`) behind an error
+  boundary (`MotiAvatarErrorBoundary`) for absent/failed WebGL.
+- Performance: capped DPR, low geometry, single Canvas, and a frame loop paused
+  when offscreen (hidden mobile panel) or the tab is hidden.
+- Automated tests (Vitest) for the pure state mapping and animation config.
+
+**New dependencies:** `three` (0.185.1), `@react-three/fiber` (9.6.1) runtime;
+`@types/three` (0.185.1) dev-only. No drei, no animation/physics/loader library,
+no 3D asset.
+
+**Dependencies:** Phase 5 (conversation state to reflect).
+
+**Not in this phase:** the current concept remains a static label (not
+AI-derived); `celebrating` is not yet triggered by app behaviour; no lip-sync,
+voice, TTS, or external model loading.
+
+**Definition of done:** Moti renders as a polished 3D character that changes to
+Thinking during a request, Explaining after a successful answer, Error on failure,
+Listening while composing, and Idle otherwise — with reduced-motion and WebGL
+fallbacks, and no regression to lint / tests / build.
+
+---
+
+## Phase 7 — Active-learning loop (Think → Explain → Correct)
 
 **Goal:** the teach-back and correction pedagogy.
 
 **Deliverables**
 - Moti Mirror teach-back interaction (learner explains in their own words).
 - `/api/evaluate` handler for misconception detection + correction against source.
-- Adaptive micro-challenges sized to the learner's level.
+- Adaptive micro-challenges sized to the learner's level (wire the already-built
+  `celebrating` Moti state to challenge success).
 
 **Dependencies:** Phase 5 (grounded model access).
 
@@ -234,7 +284,7 @@ end-to-end on the demo course.
 
 ---
 
-## Phase 7 — Mastery Journey & Memory Echo (Remember)
+## Phase 8 — Mastery Journey & Memory Echo (Remember)
 
 **Goal:** track understanding and schedule review.
 
@@ -243,7 +293,7 @@ end-to-end on the demo course.
 - Mastery Journey view.
 - Memory Echo review queue with spaced scheduling (prototype-level).
 
-**Dependencies:** Phases 3 & 6 (persistence + concepts to track).
+**Dependencies:** Phases 3 & 7 (persistence + concepts to track).
 
 **Risks:** scheduling logic complexity; keeping it simple and demonstrable.
 
@@ -252,31 +302,6 @@ populates and surfaces items; lint + build clean.
 
 **Definition of done:** the Remember portion of the flow is demonstrable and
 persists.
-
----
-
-## Phase 8 — Animated 3D assistant (Moti)
-
-**Goal:** the signature 3D assistant.
-
-**Deliverables**
-- React Three Fiber + Three.js assistant that reflects interaction state
-  (idle / thinking / speaking / encouraging).
-- Integration into the learning UI.
-- `prefers-reduced-motion` and graceful fallback when WebGL is unavailable.
-
-**New dependencies:** React Three Fiber, Three.js (introduced here).
-
-**Dependencies:** core learning flow (Phases 5–7) so the avatar has states to
-reflect.
-
-**Risks:** bundle weight; WebGL support/performance on weaker devices.
-
-**Validation:** avatar renders, animates, reflects state; reduced-motion honoured;
-lint + build clean.
-
-**Definition of done:** Moti is present and meaningfully reactive without
-regressing performance or the build.
 
 ---
 

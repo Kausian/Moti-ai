@@ -122,6 +122,34 @@ rule, the teach-back loop, and visible mastery tracking.
 - **Grounding stays local:** retrieval runs in the browser; only the selected
   excerpts are sent. Gemini does not perform document retrieval.
 
+## 3D assistant decision (Phase 6)
+
+- **Libraries:** **`@react-three/fiber` 9.6.1** + **`three` 0.185.1** (runtime),
+  **`@types/three` 0.185.1** (dev). `@react-three/fiber` 9 is the React 19 line
+  (peer `react >=19 <19.3`, satisfied by the installed React 19.2.4); `three` ships
+  no bundled types, so `@types/three` is still required. **No `@react-three/drei`**
+  and **no** animation/physics/GLTF-loader library — R3F + Three.js are used
+  directly.
+- **Procedural, not a downloaded model:** Moti is built from Three.js primitives.
+  This avoids asset-licensing questions and an external binary model, keeps the
+  repo self-contained, removes a network/bundle dependency for the scene, gives
+  direct control over the state animations, and is easy to explain. **No human or
+  robot avatar, texture, or image asset is loaded.**
+- **Client-only rendering:** the `<Canvas>` is loaded with `next/dynamic` and
+  `ssr: false`, so no `window`/WebGL is touched during server rendering and the
+  production build succeeds without a browser. The server-rendered panel still
+  shows Moti's accessible status and a 2D fallback.
+- **Reduced motion + WebGL fallback:** `prefers-reduced-motion` switches to static
+  poses and an on-demand frame loop; a WebGL-support check and a dedicated error
+  boundary degrade to an on-brand 2D fallback without breaking the workspace.
+- **Not emotion AI:** the visual states are a deterministic mapping of conversation
+  behaviour (pending / error / new answer / composing), not emotional inference,
+  and there is no lip-sync, voice, or webcam use.
+- **Known preview-tooling limitation:** the scene requires a normally-rendering
+  browser with working `ResizeObserver` (R3F sizes the `<Canvas>` from it). Some
+  automated/headless preview environments throttle `ResizeObserver`, which delays
+  or prevents initialization there; real browsers deliver it and the scene renders.
+
 ## Assumptions
 
 - **A1:** Gemini's free tier is sufficient for prototype-level usage and demo.

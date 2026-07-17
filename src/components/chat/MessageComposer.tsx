@@ -2,6 +2,7 @@
 
 import {
   forwardRef,
+  useEffect,
   useImperativeHandle,
   useRef,
   useState,
@@ -20,20 +21,36 @@ interface MessageComposerProps {
   onSend: (text: string) => void;
   onCancel: () => void;
   isPending: boolean;
+  /**
+   * Reports whether the learner is actively composing — the composer is focused
+   * or holds a non-empty draft. Drives Moti's "listening" visual state.
+   */
+  onActiveChange?: (active: boolean) => void;
 }
 
 // Controlled composer. It never clears itself — the panel calls `clear()` only
 // when a send is actually accepted, so text is retained if a send is gated or
 // fails before submission.
 export const MessageComposer = forwardRef<MessageComposerHandle, MessageComposerProps>(
-  function MessageComposer({ onSend, onCancel, isPending }, ref) {
+  function MessageComposer({ onSend, onCancel, isPending, onActiveChange }, ref) {
     const [value, setValue] = useState("");
+    const [focused, setFocused] = useState(false);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
 
     useImperativeHandle(ref, () => ({
       clear: () => setValue(""),
       focus: () => textareaRef.current?.focus(),
     }));
+
+    // Report composing activity (focused or a non-empty draft) to the parent,
+    // and report inactive on unmount so Moti never stays stuck in "listening".
+    const active = focused || value.trim().length > 0;
+    useEffect(() => {
+      onActiveChange?.(active);
+    }, [active, onActiveChange]);
+    useEffect(() => {
+      return () => onActiveChange?.(false);
+    }, [onActiveChange]);
 
     const canSend = value.trim().length > 0 && !isPending;
 
@@ -70,6 +87,8 @@ export const MessageComposer = forwardRef<MessageComposerHandle, MessageComposer
           value={value}
           maxLength={MAX_MESSAGE_LENGTH}
           onChange={(event) => setValue(event.target.value)}
+          onFocus={() => setFocused(true)}
+          onBlur={() => setFocused(false)}
           onKeyDown={handleKeyDown}
           placeholder="Ask Moti a question about your course material…"
           className="block w-full resize-none rounded-lg bg-transparent px-2 py-1.5 text-sm leading-6 text-moti-navy placeholder:text-moti-navy-soft/70 focus:outline-none"
