@@ -360,27 +360,53 @@ while the Mastery Journey and Memory Echo queue remain unchanged.
 
 ---
 
-## Phase 9 — Mastery Journey & Memory Echo (Remember)
+## Phase 9 — Mastery Journey & Memory Echo (Remember) _(complete)_
 
-**Goal:** track understanding and schedule review — the point at which Moti
-Mirror's recommendation is allowed to *change* state.
+**Goal:** turn the static Mastery Journey and Memory Echo panels into functional,
+locally persisted learning tools — the point at which Phase 7/8 recommendations
+are finally allowed to *change* state.
 
-**Deliverables**
-- Concept status tracking: exploring / developing / understood (persisted),
-  applying the Phase 7 mastery recommendation.
-- Mastery Journey view driven by real state.
-- Memory Echo review queue with spaced scheduling, consuming the Phase 7 recall
-  prompts (which are preview-only until now).
+**Deliverables (built)**
+- **Stable course identity:** `CourseConfiguration.courseId` (sample:
+  `sample-responsible-ai-course`; user courses: `crypto.randomUUID`). Config
+  storage bumped to **`:v2`** with a v1 migration that preserves every field and
+  document.
+- **Separate versioned progress storage** (`moti-ai:learning-progress:v1`), never
+  mixed into the configuration object, fully validated on read with a safe
+  empty-state fallback.
+- **Explicit "Save to learning journey"** on validated Mirror and challenge
+  feedback — never automatic — and **idempotent** via `processedActivityIds`.
+- **Deterministic mastery policy** (`lib/progress/mastery-policy`): a weaker later
+  result never downgrades; it sets `needsReview`, which an equal-or-stronger
+  success clears. `not-evaluated` changes nothing. Evidence bounded to 20/concept.
+- **Real Mastery Journey**: summary counts (no percentages), concepts grouped by
+  status, needs-review shown alongside (never instead of) earned mastery, source
+  snapshots, and an honest empty state.
+- **Real Memory Echo**: due / later / completed groups derived from timestamps via
+  one shared clock, a learner-controlled review dialog (local-only recall box, **no
+  AI**), reschedule, and remove.
+- **Course-scoped reset** that names the course and leaves other courses,
+  documents, and settings untouched.
+- 94 new automated tests (**414 total**); none calls Gemini, and all policy time is
+  injected.
 
-**Dependencies:** Phases 3 & 7 (persistence + recommendations to apply).
+**New dependencies:** none — native `Date`/`Intl` via pure utilities.
 
-**Risks:** scheduling logic complexity; keeping it simple and demonstrable.
+**Dependencies:** Phases 3, 7 & 8 (persistence + recommendations to apply).
 
-**Validation:** concept status changes persist across reloads; review queue
-populates and surfaces items; lint + build clean.
+**Privacy boundary:** only minimal learning metadata is stored. Learner
+explanations, written answers, full AI feedback, chat, and source excerpts are
+never persisted, and progress is never sent to Gemini or any route.
 
-**Definition of done:** the Remember portion of the flow is demonstrable and
-persists.
+**Not in this phase:** no cloud sync, accounts, notifications, scheduling jobs,
+formal grading, learning analytics, or AI evaluation of recall.
+
+**Known limitation:** localStorage is readable by any same-origin script and is not
+encrypted; real educational records would need authenticated server storage.
+
+**Definition of done:** a learner saves Mirror and challenge results, sees a real
+Mastery Journey and review queue, practises recall, and finds it all intact after a
+reload — with duplicates impossible and other courses untouched.
 
 ---
 

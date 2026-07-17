@@ -127,6 +127,13 @@ export interface KnowledgeDocument {
 
 /** The full, persistable course configuration. */
 export interface CourseConfiguration {
+  /**
+   * Stable identity for this course, used to scope learning progress (Phase 9).
+   * The editable `courseTitle` is deliberately NOT used as identity — renaming a
+   * course must not orphan its progress. The sample course uses a deterministic
+   * id; user/migrated courses get a `crypto.randomUUID()`.
+   */
+  courseId: string;
   courseTitle: string;
   learnerLevel: LearnerLevel;
   learningObjective: string;
@@ -504,6 +511,112 @@ export interface ChallengeEvaluationResult {
   nextAction: ChallengeNextAction;
   memoryEchoPrompt?: string;
 }
+
+// ---------------------------------------------------------------------------
+// Phase 9 — locally persisted learning progress
+//
+// Stored under its own versioned key, separate from the course configuration.
+//
+// PRIVACY BOUNDARY: this is deliberately *minimal learning metadata* only.
+// Learner explanations, written challenge answers, full AI feedback, chat
+// messages, and source excerpts are NEVER persisted — only concept identity, the
+// mastery recommendation, activity type/outcome, source ids + label snapshots,
+// timestamps, and the Memory Echo prompt.
+// ---------------------------------------------------------------------------
+
+export type LearningActivityType = "moti-mirror" | "micro-challenge";
+
+/** Only real mastery states persist; "not-evaluated" is never stored. */
+export type PersistedMasteryStatus = "exploring" | "developing" | "understood";
+
+/** One saved activity result backing a concept's status. */
+export interface MasteryEvidence {
+  id: string;
+  /** Idempotency key: the same activity result can never be saved twice. */
+  activityId: string;
+  activityType: LearningActivityType;
+  masteryRecommendation: PersistedMasteryStatus;
+  challengeOutcome?: "correct" | "partially-correct" | "incorrect";
+  attemptNumber?: number;
+  sourceIds: string[];
+  /** ISO 8601 timestamp. */
+  createdAt: string;
+}
+
+export interface ConceptProgress {
+  /** `courseId:sourceDocumentId:normalized-concept-title`. */
+  id: string;
+  courseId: string;
+  conceptTitle: string;
+  sourceDocumentId: string;
+  /** A snapshot: kept readable even if the document is later removed. */
+  sourceDocumentTitle: string;
+  sectionHeading?: string;
+  masteryStatus: PersistedMasteryStatus;
+  /** True when a later weaker result suggests revisiting — status is unchanged. */
+  needsReview: boolean;
+  activityCount: number;
+  successfulActivityCount: number;
+  lastActivityType: LearningActivityType;
+  lastActivityAt: string;
+  sourceIds: string[];
+  evidence: MasteryEvidence[];
+}
+
+export type MemoryEchoStatus = "scheduled" | "completed";
+
+export interface MemoryEchoItem {
+  id: string;
+  courseId: string;
+  conceptId: string;
+  conceptTitle: string;
+  /** Plain text, rendered as plain text — never Markdown or HTML. */
+  prompt: string;
+  status: MemoryEchoStatus;
+  /** ISO 8601. "Due now" vs "later" is derived from this against a supplied time. */
+  dueAt: string;
+  sourceIds: string[];
+  sourceDocumentTitle: string;
+  sectionHeading?: string;
+  createdAt: string;
+  updatedAt: string;
+  completedAt?: string;
+}
+
+export interface LearningProgressState {
+  version: 1;
+  concepts: ConceptProgress[];
+  memoryEchoItems: MemoryEchoItem[];
+  /** Every activity id already saved — the idempotency ledger. */
+  processedActivityIds: string[];
+  updatedAt: string;
+}
+
+/**
+ * The minimal, validated payload used to save a result. It is built only from
+ * already-validated Mirror/Challenge output and structurally cannot carry learner
+ * free text or full feedback.
+ */
+export interface SaveLearningOutcomeInput {
+  activityId: string;
+  activityType: LearningActivityType;
+  courseId: string;
+  conceptTitle: string;
+  sourceDocumentId: string;
+  sourceDocumentTitle: string;
+  sectionHeading?: string;
+  sourceIds: string[];
+  masteryRecommendation: MotiMirrorMasteryRecommendation;
+  challengeOutcome?: ChallengeOutcome;
+  attemptNumber?: number;
+  memoryEchoPrompt?: string;
+}
+
+/** How a learner self-reports a Memory Echo review. Never an AI judgement. */
+export type MemoryEchoReviewDecision =
+  | "remembered"
+  | "needs-practice"
+  | "review-tomorrow";
 
 /** The structured JSON Moti Mirror must return (validated at runtime). */
 export interface MotiMirrorStructuredResponse {

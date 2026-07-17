@@ -39,11 +39,50 @@ remember through spaced review — with a friendly animated 3D assistant alongsi
 
 ## Development status
 
-**Phase 8 — adaptive micro-challenges (current).** Pick a grounded answer, choose
-**"Challenge me"**, and Moti sets a focused practice task built only from that
-answer's sources — then marks your response and celebrates a genuine win.
+**Phase 9 — persisted Mastery Journey & Memory Echo (current).** The right-hand
+panels stop being mock-ups: finish a Moti Mirror or Micro-Challenge, choose **"Save
+to learning journey"**, and your progress is recorded — in this browser only — and
+comes back for review.
 
 What works in this phase:
+
+- **Progress you choose to keep.** Nothing is saved automatically. Validated
+  feedback offers **"Save to learning journey"**, so what gets recorded is your
+  decision, not a side effect of asking a question.
+- **A real Mastery Journey** — concepts grouped as Exploring / Developing /
+  Understood, with honest counts (no percentages, points, or streaks), the last
+  activity, and the source it came from.
+- **Mastery that doesn't punish practice.** A weaker later result **never
+  downgrades** a concept — it flags **"Needs review"** instead. One shaky attempt
+  shouldn't erase something you've already shown you understand; a later solid
+  result clears the flag.
+- **A real Memory Echo queue** — Due now / Review later / Completed, with a simple
+  schedule (weaker understanding returns sooner). Practise a prompt, then tell Moti
+  how it went: **I remembered**, **Needs more practice**, or **Review tomorrow**.
+- **No AI in review.** The optional recall box is scratch space in the page — never
+  saved, never sent anywhere, and nothing grades it. You decide.
+- **It survives a reload**, saving twice is impossible (idempotent), and resetting
+  progress names the course, spares your documents and settings, and never touches
+  another course's data.
+- **Automated tests** (Vitest, **414 total**) — course-identity migration, storage
+  validation, concept ids, the mastery policy, review scheduling, selectors, the
+  reducer, and the privacy boundary. **No test calls the real API.**
+
+> **Privacy:** only minimal learning metadata is stored — concept, mastery,
+> activity type/outcome, source ids and labels, timestamps, and the review prompt.
+> Your explanations, written answers, full AI feedback, chat, and source excerpts
+> are **never** persisted, and progress is **never** sent to Gemini.
+>
+> **Limitation:** localStorage is readable by any script on the same origin and is
+> not encrypted. A production system handling real educational records would need
+> authenticated server-side storage — there is no cloud sync here.
+
+<details>
+<summary><strong>Phase 8 — adaptive micro-challenges (complete)</strong></summary>
+
+Pick a grounded answer, choose **"Challenge me"**, and Moti sets a focused practice
+task built only from that answer's sources — then marks your response and
+celebrates a genuine win.
 
 - **Four challenge types** — multiple choice, scenario, correct the mistake, and
   explain in your own words. Or pick **Surprise me** and let Moti choose.
@@ -181,6 +220,7 @@ What works in this phase:
 </details>
 </details>
 </details>
+</details>
 
 ### AI configuration
 
@@ -240,11 +280,13 @@ the configured Gemini account and terms.
 
 ### Not connected yet (later phases)
 
-- **No** Mastery Journey updates and **no** Memory Echo scheduling (Phase 9). Moti
-  Mirror and micro-challenges produce a mastery *recommendation* and a recall
-  *preview* only; neither changes tracked state.
-- Conversation history, teach-back feedback, and challenge results are **not**
-  persisted across reloads, and there is no challenge history.
+- **No** cloud sync, accounts, or teacher views — progress lives in one browser.
+- **No** notifications, reminders, or background scheduling; reviews surface when
+  you open the app.
+- **No** formal grading, scores, or learning analytics — mastery is a
+  recommendation, and review is self-reported.
+- Conversation history, teach-back feedback, and challenge results are still **not**
+  persisted (only the minimal saved outcome is), and there is no challenge history.
 
 See [`docs/development-plan.md`](docs/development-plan.md) for the full phase plan.
 

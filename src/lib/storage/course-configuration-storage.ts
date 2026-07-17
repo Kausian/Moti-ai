@@ -11,10 +11,29 @@ import type {
   SupportedDocumentType,
 } from "@/lib/types";
 
+/**
+ * v2 adds the stable `courseId` that Phase 9 scopes learning progress by. v1 data
+ * is migrated on read (see `migrateLegacyConfiguration`) rather than discarded —
+ * a learner's saved documents and settings must survive the upgrade.
+ */
 export const COURSE_CONFIGURATION_STORAGE_KEY =
+  "moti-ai:course-configuration:v2";
+
+/** Read-only: the pre-courseId key, still read once so v1 data can migrate. */
+export const LEGACY_COURSE_CONFIGURATION_STORAGE_KEY =
   "moti-ai:course-configuration:v1";
 
 export type SaveResult = { ok: true } | { ok: false; message: string };
+
+/** Injectable so migration tests are deterministic and need no crypto stub. */
+export type IdFactory = () => string;
+
+function defaultIdFactory(): string {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return crypto.randomUUID();
+  }
+  return `course_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}`;
+}
 
 function isString(value: unknown): value is string {
   return typeof value === "string";
@@ -54,11 +73,8 @@ function isKnowledgeDocument(value: unknown): value is KnowledgeDocument {
   );
 }
 
-export function isCourseConfiguration(
-  value: unknown,
-): value is CourseConfiguration {
-  if (typeof value !== "object" || value === null) return false;
-  const config = value as Record<string, unknown>;
+/** The shared shape of v1 and v2, minus identity. */
+function hasValidCourseFields(config: Record<string, unknown>): boolean {
   return (
     isString(config.courseTitle) &&
     isLearnerLevel(config.learnerLevel) &&
@@ -69,25 +85,79 @@ export function isCourseConfiguration(
   );
 }
 
-export function loadConfiguration(): CourseConfiguration | null {
-  if (typeof window === "undefined") return null;
+export function isCourseConfiguration(
+  value: unknown,
+): value is CourseConfiguration {
+  if (typeof value !== "object" || value === null) return false;
+  const config = value as Record<string, unknown>;
+  return (
+    isString(config.courseId) &&
+    config.courseId.trim().length > 0 &&
+    hasValidCourseFields(config)
+  );
+}
 
+/**
+ * Upgrades a v1 configuration (no `courseId`) to v2 by assigning a fresh stable
+ * id. Every other field — including all documents — is preserved untouched.
+ *
+ * A migrated course gets a random id rather than the sample id: stored data may
+ * have been edited, and we cannot reliably tell an untouched sample from a
+ * customised one. A random id is always stable and never collides with another
+ * course's progress.
+ */
+export function migrateLegacyConfiguration(
+  value: unknown,
+  newId: IdFactory = defaultIdFactory,
+): CourseConfiguration | null {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    return null;
+  }
+  const config = value as Record<string, unknown>;
+  if (!hasValidCourseFields(config)) return null;
+
+  // Already identified (a v2 object read from the legacy key) — keep its id.
+  if (isString(config.courseId) && config.courseId.trim().length > 0) {
+    return config as unknown as CourseConfiguration;
+  }
+  return { ...(config as unknown as CourseConfiguration), courseId: newId() };
+}
+
+function readKey(key: string): unknown {
   let raw: string | null;
   try {
-    raw = window.localStorage.getItem(COURSE_CONFIGURATION_STORAGE_KEY);
+    raw = window.localStorage.getItem(key);
   } catch {
     return null;
   }
   if (!raw) return null;
-
-  let parsed: unknown;
   try {
-    parsed = JSON.parse(raw);
+    return JSON.parse(raw);
   } catch {
     return null;
   }
+}
 
-  return isCourseConfiguration(parsed) ? parsed : null;
+export function loadConfiguration(
+  newId: IdFactory = defaultIdFactory,
+): CourseConfiguration | null {
+  if (typeof window === "undefined") return null;
+
+  const current = readKey(COURSE_CONFIGURATION_STORAGE_KEY);
+  if (current !== null) {
+    return isCourseConfiguration(current) ? current : null;
+  }
+
+  // No v2 record: migrate a v1 one if present, then persist the upgrade so the
+  // id stays stable across reloads.
+  const legacy = readKey(LEGACY_COURSE_CONFIGURATION_STORAGE_KEY);
+  if (legacy === null) return null;
+
+  const migrated = migrateLegacyConfiguration(legacy, newId);
+  if (!migrated) return null;
+
+  saveConfiguration(migrated);
+  return migrated;
 }
 
 export function saveConfiguration(config: CourseConfiguration): SaveResult {

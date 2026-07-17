@@ -122,6 +122,46 @@ rule, the teach-back loop, and visible mastery tracking.
 - **Grounding stays local:** retrieval runs in the browser; only the selected
   excerpts are sent. Gemini does not perform document retrieval.
 
+## Learning-progress decisions (Phase 9)
+
+- **A weaker result never downgrades mastery.** This is the phase's most
+  consequential product decision. One weak attempt is poor evidence against
+  previously demonstrated understanding — learners misread questions, rush, and
+  stumble on phrasing. A tool that silently demotes them punishes the exact
+  behaviour it exists to encourage, and turns practice into something to avoid.
+  Instead the concept keeps its earned status and gains a `needsReview` flag, which
+  is honest ("this looked shaky, come back to it") without erasing progress. An
+  equal-or-stronger success clears it. We label this a conservative heuristic, not
+  an optimised model of learning.
+- **Explicit save, not silent persistence.** Auto-saving every AI result would be
+  less friction but worse product: the learner would not know what was recorded, and
+  a throwaway attempt would silently become their record. One "Save to learning
+  journey" action keeps persistence visible and consensual, and makes the Journey
+  something the learner authored rather than something that happened to them.
+- **Minimal metadata is a design constraint, not a nice-to-have.** localStorage is
+  same-origin readable and unencrypted, so the safest data is the data we never
+  store. Building the save payload through a closed `SaveLearningOutcomeInput`
+  means learner explanations, written answers, and full AI feedback *cannot* reach
+  storage by accident — a structural guarantee rather than a review-time promise. A
+  real saved record measures ~1.5 KB.
+- **Identity is not the title.** Scoping progress by an editable `courseTitle`
+  would orphan a learner's history the moment they renamed the course. A separate
+  `courseId` (deterministic for the sample, random for user courses) survives
+  renames, and the v1→v2 migration assigns one without touching any existing
+  document.
+- **Time is injected everywhere.** Every policy function takes `now`, so scheduling,
+  grouping, and mastery updates are deterministic and testable without fake timers.
+  The UI reads the clock through a single `useSyncExternalStore` store — hydration
+  safe, and one timer for the next due boundary rather than one per item.
+- **Configuration reset and progress reset are separate actions.** They answer
+  different questions ("give me the sample material back" vs "clear what I've
+  learned"), and conflating them would make one destructive by surprise. Because the
+  sample id is deterministic, resetting to the sample course *does* resurface its
+  earlier progress — acceptable, and documented rather than hidden.
+- **Recall is self-reported, deliberately.** Asking Gemini to grade a recall note
+  would add cost, latency, and a false air of assessment to what is really a
+  memory-jog. The learner decides; the box they type in is never stored or sent.
+
 ## Micro-challenge decisions (Phase 8)
 
 - **Two routes, not one.** Generation writes a task from sources; evaluation marks

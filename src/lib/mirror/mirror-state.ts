@@ -23,6 +23,12 @@ export interface MirrorActivity {
   learnerExplanation: string;
   pending: boolean;
   feedback: MotiMirrorStructuredResponse | null;
+  /**
+   * Identifies the current feedback for idempotent saving (Phase 9). Minted once
+   * per *successful* evaluation, so retrying a failed request never mints a
+   * duplicate, while a genuinely new evaluation gets a new id.
+   */
+  feedbackActivityId: string | null;
   error: ChatErrorPayload | null;
 }
 
@@ -38,7 +44,12 @@ export type MirrorAction =
     }
   | { type: "draft"; learnerExplanation: string }
   | { type: "submit" }
-  | { type: "success"; feedback: MotiMirrorStructuredResponse }
+  | {
+      type: "success";
+      feedback: MotiMirrorStructuredResponse;
+      /** Supplied by the hook so the reducer stays pure. */
+      activityId: string;
+    }
   | { type: "failure"; error: ChatErrorPayload }
   | { type: "cancel" }
   | { type: "edit" }
@@ -56,6 +67,7 @@ export function mirrorReducer(state: MirrorState, action: MirrorAction): MirrorS
       learnerExplanation: "",
       pending: false,
       feedback: null,
+      feedbackActivityId: null,
       error: null,
     };
   }
@@ -67,18 +79,36 @@ export function mirrorReducer(state: MirrorState, action: MirrorAction): MirrorS
       return { ...state, learnerExplanation: action.learnerExplanation };
     case "submit":
       // A new attempt clears the previous outcome but keeps the explanation.
-      return { ...state, pending: true, error: null, feedback: null };
+      return {
+        ...state,
+        pending: true,
+        error: null,
+        feedback: null,
+        feedbackActivityId: null,
+      };
     case "success":
-      return { ...state, pending: false, feedback: action.feedback, error: null };
+      return {
+        ...state,
+        pending: false,
+        feedback: action.feedback,
+        feedbackActivityId: action.activityId,
+        error: null,
+      };
     case "failure":
       // The learner's explanation is always preserved so they can retry.
-      return { ...state, pending: false, error: action.error, feedback: null };
+      return {
+        ...state,
+        pending: false,
+        error: action.error,
+        feedback: null,
+        feedbackActivityId: null,
+      };
     case "cancel":
       // Cancelling leaves no error and no feedback — just the explanation.
       return { ...state, pending: false };
     case "edit":
       // Return to the composer to revise the explanation.
-      return { ...state, feedback: null, error: null };
+      return { ...state, feedback: null, feedbackActivityId: null, error: null };
     default:
       return state;
   }

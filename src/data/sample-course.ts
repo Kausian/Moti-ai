@@ -7,6 +7,14 @@ import type { CourseConfiguration, KnowledgeDocument } from "@/lib/types";
 export const SAMPLE_DOCUMENT_ID = "sample-responsible-ai";
 const SAMPLE_ADDED_AT = "2025-01-01T00:00:00.000Z";
 
+/**
+ * The sample course's stable identity. Deterministic so the default render is
+ * identical on server and client, and so resetting to the sample course always
+ * restores the same id (its earlier learning progress therefore reappears —
+ * documented behaviour, not a bug).
+ */
+export const SAMPLE_COURSE_ID = "sample-responsible-ai-course";
+
 const SAMPLE_DOCUMENT_CONTENT = `# Responsible AI and Prompt Engineering — Starter Notes
 
 ## AI hallucinations
@@ -51,6 +59,7 @@ export function createSampleDocument(): KnowledgeDocument {
 
 export function createDefaultConfiguration(): CourseConfiguration {
   return {
+    courseId: SAMPLE_COURSE_ID,
     courseTitle: "Responsible AI and Prompt Engineering Fundamentals",
     learnerLevel: "beginner",
     learningObjective:

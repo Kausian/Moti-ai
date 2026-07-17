@@ -14,12 +14,7 @@ import { useMotiChallenge } from "@/hooks/useMotiChallenge";
 import { useMotiVisualState } from "@/hooks/useMotiVisualState";
 import { combineAvatarSignals } from "@/lib/avatar/state-mapping";
 import type { LearnerLevel, LoopStage, MotiLearningLoopStage } from "@/lib/types";
-import {
-  LOOP_STAGES,
-  demoCourse,
-  learningConcepts,
-  reviewItems,
-} from "@/data/demo-data";
+import { LOOP_STAGES, demoCourse } from "@/data/demo-data";
 
 const LEVEL_LABEL: Record<LearnerLevel, string> = {
   beginner: "Beginner",
@@ -50,6 +45,8 @@ export function LearningWorkspace() {
   const mirror = useMotiMirror();
   const challenge = useMotiChallenge();
   const [composerActive, setComposerActive] = useState(false);
+  // Memory Echo recall is local-only, but Moti may still listen while typing.
+  const [reviewTyping, setReviewTyping] = useState(false);
   const answerCount = useMemo(
     () =>
       conversation.messages.filter(
@@ -65,7 +62,9 @@ export function LearningWorkspace() {
       {
         requestPending: conversation.isPending,
         hasError: conversation.error !== null,
-        composing: composerActive,
+        // Memory Echo typing only ever adds "listening" — it never outranks an
+        // active chat, Mirror, or challenge request.
+        composing: composerActive || reviewTyping,
         answerCount,
         hasMessages: conversation.messages.length > 0,
       },
@@ -152,7 +151,7 @@ export function LearningWorkspace() {
             aria-labelledby="tab-journey"
             className={`area-journey ${visibility("journey")} md:block lg:min-h-0 lg:overflow-y-auto`}
           >
-            <JourneyPanel concepts={learningConcepts} reviewItems={reviewItems} />
+            <JourneyPanel onReviewTypingChange={setReviewTyping} />
           </div>
         </div>
       </main>

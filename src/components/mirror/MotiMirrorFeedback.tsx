@@ -19,6 +19,9 @@ import {
 } from "@/components/ui/icons";
 import { MisconceptionItem } from "./MisconceptionItem";
 import { MemoryEchoPreview } from "./MemoryEchoPreview";
+import { SaveToJourney } from "@/components/learning/SaveToJourney";
+import { useCourseConfiguration } from "@/hooks/useCourseConfiguration";
+import { buildMirrorOutcomeInput } from "@/lib/progress/outcome-input";
 
 const NEXT_ACTION_LABEL: Record<MotiMirrorNextAction, string> = {
   "retry-teach-back": "Try explaining it again",
@@ -31,6 +34,8 @@ interface MotiMirrorFeedbackProps {
   feedback: MotiMirrorStructuredResponse;
   /** The sources sent with the request, used to resolve validated ids to chips. */
   sources: ConversationSource[];
+  /** Identifies this evaluation so saving stays idempotent. */
+  activityId: string | null;
   onEdit: () => void;
   onGiveExample: () => void;
   onClose: () => void;
@@ -71,12 +76,25 @@ function Section({
 export function MotiMirrorFeedback({
   feedback,
   sources,
+  activityId,
   onEdit,
   onGiveExample,
   onClose,
   onPreviewSource,
 }: MotiMirrorFeedbackProps) {
+  const { configuration } = useCourseConfiguration();
   const evaluated = feedback.responseMode === "teach-back-feedback";
+
+  // Null for an unevaluated/blocked result or one with no validated source, which
+  // is exactly when saving must not be offered.
+  const outcome = activityId
+    ? buildMirrorOutcomeInput({
+        activityId,
+        courseId: configuration.courseId,
+        feedback,
+        sources,
+      })
+    : null;
   const usedSources = feedback.usedSourceIds
     .map((id) => sources.find((source) => source.id === id))
     .filter((source): source is ConversationSource => source !== undefined);
@@ -207,6 +225,8 @@ export function MotiMirrorFeedback({
       {feedback.memoryEchoPrompt && (
         <MemoryEchoPreview prompt={feedback.memoryEchoPrompt} />
       )}
+
+      <SaveToJourney outcome={outcome} />
 
       <div>
         <p className="mb-1.5 text-[11px] font-medium uppercase tracking-wide text-moti-navy-soft">

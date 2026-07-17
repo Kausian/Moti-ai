@@ -20,6 +20,14 @@ import {
 
 export type MirrorSendResult = "accepted" | "needs-consent" | "rejected";
 
+/** Identifies one successful teach-back evaluation, for idempotent saving. */
+function newActivityId(): string {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return `mirror_${crypto.randomUUID()}`;
+  }
+  return `mirror_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}`;
+}
+
 export interface UseMotiMirrorResult {
   state: MirrorState;
   /** The Moti Learning Loop stage derived from the real activity. */
@@ -111,7 +119,8 @@ export function useMotiMirror(): UseMotiMirrorResult {
 
       if (data && typeof data === "object" && "response" in data) {
         const feedback = (data as { response: MotiMirrorStructuredResponse }).response;
-        dispatch({ type: "success", feedback });
+        // Minted here, once per successful evaluation, so saving is idempotent.
+        dispatch({ type: "success", feedback, activityId: newActivityId() });
         setFeedbackCount((count) => count + 1);
       } else {
         const payload =

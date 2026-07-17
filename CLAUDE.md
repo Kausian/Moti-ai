@@ -113,6 +113,20 @@ away from them without an explicit decision recorded here.
   the Mastery Journey, and the Memory Echo prompt must not be scheduled or
   persisted (both are Phase 9). Moti Mirror state must never enter
   `ConversationMessage[]`.
+- **Learning progress (Phase 9)** persists **locally only**, under its own
+  versioned key **`moti-ai:learning-progress:v1`** (`src/lib/progress/`). Do **not**
+  mix it into the course-configuration object. It is scoped by
+  **`CourseConfiguration.courseId`** (sample: `sample-responsible-ai-course`; user
+  courses: `crypto.randomUUID`) — never by the editable `courseTitle`. Course
+  config storage is **`:v2`**; v1 records migrate on read and must keep every
+  document. **Privacy boundary:** persist only minimal learning metadata (concept
+  identity, mastery, activity type/outcome/attempt, source ids + label snapshots,
+  timestamps, Memory Echo prompt, review state) — **never** learner explanations,
+  written answers, full AI feedback, chat, or source excerpts. Progress is saved
+  **only** by an explicit "Save to learning journey" action, is idempotent via
+  `processedActivityIds`, and is **never** sent to Gemini or any Route Handler. A
+  weaker later result **never downgrades** a concept — it sets `needsReview`. All
+  policy lives in pure, time-injected functions; never call `Date.now()` inside it.
 - **Adaptive micro-challenges (Phase 8)** run through **two** of their own Route
   Handlers — **`src/app/api/challenge/generate/route.ts`** and
   **`src/app/api/challenge/evaluate/route.ts`** — with their contract in

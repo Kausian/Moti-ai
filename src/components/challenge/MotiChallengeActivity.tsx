@@ -288,10 +288,11 @@ export function MotiChallengeActivity({
           )
         )}
 
-        {!activity.revealed && activity.result !== null && (
+        {!activity.revealed && activity.result !== null && challenge !== null && (
           <ChallengeFeedback
             result={activity.result}
             sources={sources}
+            challenge={challenge}
             attempts={activity.attempts}
             maxAttempts={MAX_CHALLENGE_ATTEMPTS}
             canRetry={canRetryAnswer}

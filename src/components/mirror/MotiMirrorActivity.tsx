@@ -162,6 +162,7 @@ export function MotiMirrorActivity({
           <MotiMirrorFeedback
             feedback={activity.feedback}
             sources={activity.sources}
+            activityId={activity.feedbackActivityId}
             onEdit={onEdit}
             onGiveExample={onGiveExample}
             onClose={onClose}

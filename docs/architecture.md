@@ -202,6 +202,154 @@ flowchart TD
 8. **Client** (`useMotiConversation`): renders the answer as plain text with the
    validated sources as clickable chips; history is kept **in memory only**.
 
+## Learning-progress persistence (implemented in Phase 9)
+
+The Mastery Journey and Memory Echo stop being mock panels and become the
+learner's real, locally persisted record.
+
+```mermaid
+flowchart TD
+  R["Validated Mirror or Challenge result"]
+  S["Save to learning journey (explicit)"]
+  V["Validate minimal outcome\n(≥1 source, evaluated, unique activity)"]
+  M["Apply deterministic mastery policy"]
+  E["Create / update one Memory Echo item"]
+  P["Persist versioned local state\n(moti-ai:learning-progress:v1)"]
+  U["Render Mastery Journey + review queue"]
+
+  R --> S --> V --> M --> E --> P --> U
+```
+
+```mermaid
+flowchart LR
+  Pr["Memory Echo practice"]
+  L["Local-only optional recall\n(never stored, never sent)"]
+  D["Learner chooses\nRemembered / Needs practice / Review tomorrow"]
+  Up["Update local item + concept"]
+  N["No Gemini request"]
+
+  Pr --> L --> D --> Up --> N
+```
+
+```mermaid
+flowchart LR
+  LP["Learning progress"]
+  A["Never added to chat history"]
+  B["Never sent to Gemini in Phase 9"]
+  LP --> A
+  LP --> B
+```
+
+### Stable course identity
+
+Progress is scoped by `CourseConfiguration.courseId`, **not** the editable
+`courseTitle` — renaming a course must never orphan its progress. The sample
+course uses the deterministic `sample-responsible-ai-course` (so SSR and the
+client agree, and resetting to the sample always restores the same id); user and
+migrated courses get a `crypto.randomUUID()`.
+
+Course-configuration storage moved to **`:v2`**. A v1 record (no `courseId`) is
+migrated on read: a fresh id is assigned, **every other field and document is
+preserved**, and the upgrade is written back so the id stays stable. A migrated
+course gets a random id rather than the sample id because stored data may have
+been customised and we cannot reliably tell an untouched sample from an edited one.
+
+### Separate, versioned progress storage
+
+Progress lives under its own key, `moti-ai:learning-progress:v1`, deliberately
+**not** inside the configuration object: the two evolve independently and, crucially,
+are **reset independently**. Resetting the sample course restores documents and
+settings; resetting learning progress clears concepts and reviews. Neither touches
+the other. (Because the sample id is deterministic, its earlier progress reappears
+after a configuration reset — documented behaviour, not a bug.)
+
+Parsed data is fully validated before it is trusted; malformed or outdated records
+fall back to an empty state rather than throwing. Writes commit **before** the
+in-memory state is adopted, so the UI never shows progress that was not saved.
+
+### The stored-data privacy boundary
+
+Persisted: concept identity, mastery status, `needsReview`, activity counts,
+activity type/outcome/attempt, source **ids and label snapshots**, timestamps, the
+Memory Echo prompt, and review state.
+
+**Never persisted:** learner explanations, written challenge answers, full AI
+feedback, chat messages, source excerpts, hidden prompts, API payloads/responses,
+or keys. This is enforced structurally: `SaveLearningOutcomeInput` is built by
+`lib/progress/outcome-input`, which reads only the fields above — free text cannot
+reach storage by accident. A verified real save is ~1.5 KB.
+
+> **localStorage is not secure storage.** It is readable by any script on the same
+> origin and is not encrypted. A production system handling real educational
+> records would need authenticated server-side storage and access control. That is
+> out of scope for this prototype.
+
+### Explicit save, not silent persistence
+
+Nothing is written automatically after an AI response. Feedback shows a
+**"Save to learning journey"** action, and only that action persists. This keeps
+the learner in control and makes persistence visible rather than surprising.
+
+Saving is **idempotent**: every saved `activityId` is recorded in
+`processedActivityIds`, so pressing Save twice changes nothing. Mirror ids are
+minted once per *successful* evaluation (a failed request retries without minting a
+duplicate); challenge ids are derived as `challengeId:attempt:N`.
+
+### Mastery update policy
+
+A conservative prototype heuristic (`lib/progress/mastery-policy`), pure and
+time-injected. Rank: **Exploring < Developing < Understood**.
+
+| Situation | Result |
+|---|---|
+| Stronger result | Mastery moves up |
+| Equal result | Mastery unchanged |
+| **Weaker result** | **Mastery unchanged**; `needsReview = true` |
+| Equal-or-stronger *successful* result | `needsReview = false` |
+| `not-evaluated` | No change at all |
+| Duplicate activity | No change at all |
+
+**Why a weaker result never downgrades:** one weak attempt is poor evidence against
+previously demonstrated understanding — a learner can misread a question, rush, or
+stumble on phrasing. Silently demoting them would punish the very practice we want
+to encourage. Flagging `needsReview` is honest ("this looked shaky") without erasing
+earned progress, and an Understood-but-flagged concept keeps its status in the UI.
+This is a heuristic, not a scientifically optimised model.
+
+Evidence is bounded to the most recent `MAX_EVIDENCE_PER_CONCEPT` (20) entries per
+concept; counts still reflect every activity.
+
+### Memory Echo scheduling and review
+
+Initial due dates are **lightweight prototype heuristics**, not optimised spaced
+repetition: exploring **1 day**, developing **2 days**, understood **4 days** —
+weaker understanding simply returns sooner.
+
+There is at most **one open item per concept**: saving repeatedly refreshes that
+card rather than burying the learner in duplicates. On update the **earliest useful
+due date wins**, so practising again never pushes an already-imminent review away.
+
+Review is entirely learner-controlled — **no AI evaluates recall**. The optional
+recall box is local scratch space: never persisted, never sent, cleared on close.
+"I remembered" completes the item and clears `needsReview`; "Needs more practice"
+returns it tomorrow and sets `needsReview`; "Review tomorrow" is a pure
+postponement that deliberately says nothing about understanding.
+
+Grouping (due / later / completed) is derived from timestamps against an injected
+`now`, and the UI uses **one shared clock** (`lib/progress/clock-store` via
+`useSyncExternalStore`) with a single timer for the next boundary — never a timer
+per item, and hydration-safe.
+
+### Multi-course isolation and source removal
+
+Every selector filters by `courseId`: another course's progress stays stored but
+hidden. Resetting progress clears **only the current course**, naming it in the
+confirmation, and leaves other courses (and all documents/settings) intact.
+
+If a source document is later removed, its progress is **kept**: the stored
+`sourceDocumentTitle` snapshot still renders, and the card shows "Original source is
+no longer in the current course". Progress is never auto-deleted.
+
 ## Adaptive micro-challenge flow (implemented in Phase 8)
 
 A challenge is Moti setting a focused practice task and marking the response —
@@ -595,6 +743,17 @@ AI-driven concept detection is later work.
   generation and evaluation (see the prototype limitation above). This is a
   learning prototype, not a secure assessment platform, and it makes no formal
   grading claim.
+- **Learning progress (Phase 9):** stored in localStorage under its own versioned
+  key and **never sent anywhere** — not to Gemini, not to any Route Handler, and
+  never added to chat history (verified: a live `/api/chat` payload contains no
+  progress data). Only minimal learning metadata is stored; learner explanations,
+  written answers, full AI feedback, chat, and source excerpts are excluded by
+  construction. The optional Memory Echo recall box is local scratch only. Nothing
+  logs the stored data, and all progress renders as plain text.
+- **localStorage is not secure storage:** it is readable by any script on the same
+  origin and is not encrypted. Production systems handling real educational records
+  would require authenticated server-side storage and access control. No cloud sync
+  is implemented in this phase.
 - **Public endpoints:** `/api/chat`, `/api/teach-back`, and both `/api/challenge/*`
   routes are unauthenticated and rate-limited only by the provider quota.
   Production would need authentication, server-side rate limiting, protected
@@ -603,11 +762,11 @@ AI-driven concept detection is later work.
 ## Planned module structure
 
 ```
-# Present structure (through Phase 8 — adaptive micro-challenges)
+# Present structure (through Phase 9 — persisted progress)
 src/
   app/
     layout.tsx            # root layout, fonts, metadata
-    page.tsx              # CourseConfigurationProvider + workspace shell
+    page.tsx              # CourseConfiguration + LearningProgress providers + shell
     globals.css           # Tailwind v4 theme + brand tokens + motion
     api/chat/route.ts               # POST-only grounded conversation (Node runtime)
     api/teach-back/route.ts         # POST-only Moti Mirror evaluation
@@ -627,15 +786,20 @@ src/
                           #   ChallengeOption, FreeResponseChallenge,
                           #   ChallengeFeedback, ChallengeError,
                           #   ChallengeMemoryEchoPreview
-    learning/             # JourneyPanel, MemoryEcho
+    learning/             # JourneyPanel, MasterySummary, ConceptProgressCard,
+                          #   MemoryEcho, MemoryEchoItemCard, MemoryEchoReview,
+                          #   SaveToJourney, ResetLearningProgress,
+                          #   LearningProgressEmptyState
     settings/             # SettingsDrawer, CourseSettingsForm, KnowledgeUploader,
                           #   PasteKnowledgeForm, KnowledgeDocumentList/Card,
                           #   GroundingLab, RetrievalResultCard, formPrimitives
     ui/                   # icons (inline SVG), MasteryBadge, PlainTextPreviewDialog
   contexts/
     CourseConfigurationContext.tsx  # configuration state boundary (Context)
+    LearningProgressContext.tsx     # persisted progress boundary, scoped by courseId
   hooks/
     useCourseConfiguration.ts       # typed accessor for the context
+    useLearningProgress.ts          # typed accessor for persisted progress
     useKnowledgeIndex.ts            # memoized in-memory index (rebuilds on change)
     useMotiConversation.ts          # conversation state, send/cancel/retry/consent
     useMotiMirror.ts                # teach-back activity (pure reducer + fetch)
@@ -650,7 +814,10 @@ src/
     documents/            # pure ingestion (constants, validation, parse, ...)
     chunking/             # constants, split-sections, chunk-document, build-chunks
     retrieval/            # tokenize, build-index, score-chunk, retrieve-knowledge
-    storage/              # course-configuration-storage (versioned localStorage)
+    storage/              # course-configuration-storage (versioned localStorage, v2 + migration)
+    progress/             # constants, concept-id, mastery-policy, memory-echo-policy,
+                          #   validation, outcome-input, selectors, reducer, storage,
+                          #   format-date, clock-store  (pure + client-safe)
     grounding/            # answer-activity — the shared "is this answer eligible?"
                           #   + concept-title rules used by Mirror AND challenges
     chat/                 # constants, validate-chat-request, conversation-history,
@@ -675,10 +842,10 @@ src/
                           #   (pure, no three import → WebGL-free tests)
 
 # Automated tests (Vitest, dev-only): co-located *.test.ts under lib/chunking,
-# lib/retrieval, lib/chat, lib/ai, lib/mirror, lib/challenge, and lib/avatar; run
-# with `npm test`. No test calls the real Gemini API and no test creates a WebGL
-# context — the generation, mapping, policy, and activity-state boundaries are
-# pure/mockable.
+# lib/retrieval, lib/chat, lib/ai, lib/mirror, lib/challenge, lib/progress,
+# lib/storage, and lib/avatar; run with `npm test`. No test calls the real Gemini
+# API and no test creates a WebGL context — the generation, mapping, policy,
+# progress, and activity-state boundaries are pure/mockable (time is injected).
 ```
 
 _Moti Mirror reuses `lib/ai/error-mapping.ts` rather than adding a parallel

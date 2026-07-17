@@ -5,6 +5,7 @@ import type {
   ChallengeNextAction,
   ChallengeOutcome,
   ConversationSource,
+  GeneratedMotiChallenge,
   MasteryStatus,
   MotiMirrorMasteryRecommendation,
 } from "@/lib/types";
@@ -19,6 +20,9 @@ import {
   IconTarget,
 } from "@/components/ui/icons";
 import { ChallengeMemoryEchoPreview } from "./ChallengeMemoryEchoPreview";
+import { SaveToJourney } from "@/components/learning/SaveToJourney";
+import { useCourseConfiguration } from "@/hooks/useCourseConfiguration";
+import { buildChallengeOutcomeInput } from "@/lib/progress/outcome-input";
 
 // Outcome is always communicated by an icon plus a text label, never by colour.
 const OUTCOME_CONFIG: Record<
@@ -57,6 +61,8 @@ const NEXT_ACTION_LABEL: Record<ChallengeNextAction, string> = {
 interface ChallengeFeedbackProps {
   result: ChallengeEvaluationResult;
   sources: ConversationSource[];
+  /** The challenge this result belongs to — supplies its stable id + concept. */
+  challenge: GeneratedMotiChallenge;
   attempts: number;
   maxAttempts: number;
   canRetry: boolean;
@@ -102,6 +108,7 @@ function Section({
 export function ChallengeFeedback({
   result,
   sources,
+  challenge,
   attempts,
   maxAttempts,
   canRetry,
@@ -112,7 +119,19 @@ export function ChallengeFeedback({
   onClose,
   onPreviewSource,
 }: ChallengeFeedbackProps) {
+  const { configuration } = useCourseConfiguration();
   const outcome = OUTCOME_CONFIG[result.outcome];
+
+  // Null for an unevaluated result or one with no validated source — exactly when
+  // saving must not be offered. Celebration and persistence stay independent: a
+  // saved status always follows the validated recommendation, never the applause.
+  const saveInput = buildChallengeOutcomeInput({
+    courseId: configuration.courseId,
+    challenge,
+    result,
+    attemptNumber: attempts,
+    sources,
+  });
   const usedSources = result.usedSourceIds
     .map((id) => sources.find((source) => source.id === id))
     .filter((source): source is ConversationSource => source !== undefined);
@@ -224,6 +243,8 @@ export function ChallengeFeedback({
       {result.memoryEchoPrompt && (
         <ChallengeMemoryEchoPreview prompt={result.memoryEchoPrompt} />
       )}
+
+      <SaveToJourney outcome={saveInput} />
 
       <div>
         <p className="mb-1.5 text-[11px] font-medium uppercase tracking-wide text-moti-navy-soft">

@@ -229,7 +229,7 @@ describe("mirrorReducer", () => {
       learnerExplanation: "My explanation.",
     });
     state = mirrorReducer(state, { type: "submit" });
-    state = mirrorReducer(state, { type: "success", feedback: FEEDBACK });
+    state = mirrorReducer(state, { type: "success", feedback: FEEDBACK, activityId: "act-1" });
     state = mirrorReducer(state, { type: "edit" });
 
     expect(state?.feedback).toBeNull();
@@ -266,7 +266,7 @@ describe("deriveLoopStage", () => {
   });
 
   it("feedback with a recall prompt sets Remember", () => {
-    const state = mirrorReducer(openState(), { type: "success", feedback: FEEDBACK });
+    const state = mirrorReducer(openState(), { type: "success", feedback: FEEDBACK, activityId: "act-1" });
     expect(deriveLoopStage(state)).toBe("remember");
   });
 
@@ -274,6 +274,7 @@ describe("deriveLoopStage", () => {
     const state = mirrorReducer(openState(), {
       type: "success",
       feedback: { ...FEEDBACK, memoryEchoPrompt: undefined },
+      activityId: "act-1",
     });
     expect(deriveLoopStage(state)).toBe("correct");
   });
@@ -302,7 +303,7 @@ describe("isDrafting", () => {
     });
     expect(isDrafting(mirrorReducer(drafted, { type: "submit" }))).toBe(false);
     expect(
-      isDrafting(mirrorReducer(drafted, { type: "success", feedback: FEEDBACK })),
+      isDrafting(mirrorReducer(drafted, { type: "success", feedback: FEEDBACK, activityId: "act-1" })),
     ).toBe(false);
   });
 });
