@@ -278,6 +278,35 @@ rule, the teach-back loop, and visible mastery tracking.
 - **A6:** Evaluators value demonstrated grounded interaction and product thinking
   over breadth of half-finished features.
 
+## Reliability & security hardening decisions (Phase 11)
+
+- **One shared bounded JSON reader over per-route parsing.** Repeating body
+  parsing in four routes drifts; a single `src/lib/http/read-json-request.ts`
+  gives uniform **415 / 413 / 400** behaviour. The size cap is checked in **UTF-8
+  bytes read from the stream** (not string length) and the stream is **cancelled**
+  on overflow, so an oversized body is never fully buffered. `Content-Length` is
+  used only as a cheap early-out and never trusted alone. Limit: **128 KiB**,
+  comfortably above every valid request.
+- **Baseline security headers, but no CSP.** `nosniff`, `X-Frame-Options: DENY`,
+  a strict `Referrer-Policy`, a locked `Permissions-Policy`, and `COOP` are safe
+  and framework-compatible. A strict nonce-based CSP cannot be applied cleanly to
+  the prototype's inline framework/runtime and the Three.js `<Canvas>` without
+  breaking hydration, so it is **documented future work** rather than shipped
+  brittle — avoiding security theatre.
+- **No in-memory rate limiter.** A serverless in-memory counter resets per
+  instance and would give false assurance; durable global rate limiting needs a
+  shared store or edge/WAF and is out of scope. Honest omission over a fake gate.
+- **Bounded idempotency ledger.** `processedActivityIds` is capped at 500 (newest
+  + evidence-referenced retained); the trade-off (an extremely aged-out duplicate
+  may re-save one extra evidence entry) is documented rather than hidden.
+- **Playwright for E2E, always mocked.** `@playwright/test` is the one new dev
+  dependency; every `/api/**` call is intercepted with fixtures so no test spends
+  real Gemini quota. Kept out of `npm run verify` to avoid a browser download in CI.
+- **Dependency posture.** The only `npm audit` finding is a moderate transitive
+  `postcss <8.5.10` advisory reached through Next's build tooling; the only "fix"
+  is a breaking Next downgrade, so it is **deferred, not force-fixed** (build-time
+  only, not a runtime surface).
+
 ## Limitations
 
 - No formal user study underlies these findings; they are reasoned from
@@ -294,7 +323,10 @@ rule, the teach-back loop, and visible mastery tracking.
 - Prompt-injection defences (hard rules before configuration, delimited/escaped
   untrusted sources, source-id re-validation) reduce but cannot eliminate the
   risk; this is a prototype, not a hardened system.
-- The `POST /api/chat` endpoint is public and unauthenticated in this prototype;
-  production would require server-side rate limiting and authentication.
+- All AI endpoints (`/api/chat`, `/api/teach-back`, `/api/challenge/*`) are public
+  and unauthenticated, with **no durable global rate limiting**; production would
+  require authentication and a shared-store/edge rate limit. Browser-held challenge
+  state is re-validated server-side but is not authoritative. (Phase 11 detail:
+  `docs/testing-and-security.md`.)
 - Conversation history is in-memory only and not persisted across reloads.
 - The 3D assistant requires WebGL and is not optimised for low-end/mobile devices.

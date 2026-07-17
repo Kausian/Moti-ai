@@ -39,10 +39,51 @@ remember through spaced review — with a friendly animated 3D assistant alongsi
 
 ## Development status
 
-**Phase 9 — persisted Mastery Journey & Memory Echo (current).** The right-hand
-panels stop being mock-ups: finish a Moti Mirror or Micro-Challenge, choose **"Save
-to learning journey"**, and your progress is recorded — in this browser only — and
-comes back for review.
+**Phase 11 — reliability, security hardening & final regression (current).** No new
+learning features — this phase makes the existing prototype sturdier and tests it
+against malformed, oversized, adversarial, and failing conditions.
+
+What this phase adds:
+
+- **One shared, bounded JSON reader** (`src/lib/http/`) for every AI route, with
+  proper HTTP status codes: **415** for a wrong/missing content type, **413** for
+  an oversized body (checked against a **128 KiB** cap by streamed UTF-8 bytes, not
+  string length, and cancelled mid-stream on overflow), **400** for malformed JSON.
+  Every AI response is `Cache-Control: no-store`, and error bodies stay safe and
+  public — never a raw provider message, stack trace, or secret.
+- **Baseline security headers** on every route (`nosniff`, `X-Frame-Options: DENY`,
+  a strict `Referrer-Policy`, a locked-down `Permissions-Policy`, and
+  `Cross-Origin-Opener-Policy`). A strict production CSP is documented as future
+  work rather than shipped brittle.
+- **A bounded idempotency ledger** — `processedActivityIds` is capped at 500 so
+  local progress can't grow without limit, keeping the newest ids (and any still
+  referenced by stored evidence).
+- **An app-level error boundary** (`src/app/error.tsx`) — a calm recovery screen
+  with Try again / Reload that never exposes a stack trace and never wipes your
+  saved course or progress.
+- **Named prompt-injection & source-grounding regression tests**, a **shared-HTTP
+  test suite**, **route-level tests** for all four endpoints (415/413/400/no-store/
+  cancellation/timeout/safe errors, with Gemini mocked), and a focused **Playwright**
+  E2E suite (app smoke, grounded chat, error recovery) that intercepts the AI routes
+  with fixtures.
+- **Automated tests** — **474 Vitest** (unit + route) and **3 Playwright** E2E.
+  **No test — unit, route, or E2E — calls the real Gemini API.**
+
+Honest limits kept in view: the endpoints are **unauthenticated**, there is **no
+durable global rate limiting**, browser-held challenge state is re-validated but not
+authoritative, prompt injection is **mitigated not solved**, and localStorage is
+**not encrypted**. See [`docs/testing-and-security.md`](docs/testing-and-security.md)
+and [`docs/release-checklist.md`](docs/release-checklist.md).
+
+> Phase 10 (Learning Constellation) was **intentionally skipped**; Phase 12 handles
+> final visual polish and accessibility, Phase 13 handles deployment.
+
+<details>
+<summary><strong>Phase 9 — persisted Mastery Journey & Memory Echo (complete)</strong></summary>
+
+The right-hand panels stop being mock-ups: finish a Moti Mirror or Micro-Challenge,
+choose **"Save to learning journey"**, and your progress is recorded — in this
+browser only — and comes back for review.
 
 What works in this phase:
 
@@ -76,6 +117,8 @@ What works in this phase:
 > **Limitation:** localStorage is readable by any script on the same origin and is
 > not encrypted. A production system handling real educational records would need
 > authenticated server-side storage — there is no cloud sync here.
+
+</details>
 
 <details>
 <summary><strong>Phase 8 — adaptive micro-challenges (complete)</strong></summary>
@@ -266,6 +309,14 @@ the configured Gemini account and terms.
 
 ### Prototype limits & security notes
 
+- **Shared HTTP hardening (Phase 11):** every AI route reads its body through one
+  bounded reader — **415** for a wrong/missing content type, **413** for a body over
+  **128 KiB** (measured in streamed UTF-8 bytes and cancelled on overflow), **400**
+  for malformed JSON. All AI responses are `Cache-Control: no-store`, and errors are
+  safe public payloads (never a raw provider message, stack, or key). Baseline
+  security headers (`nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy`,
+  `Permissions-Policy`, `COOP`) are set on every route. **No CSP yet** — a strict
+  production CSP is documented future work.
 - Chat request caps: message **300 chars**, history **6 items**, sources **4**
   (≤1,500 chars each, ≤6,000 total). Server timeout **45s**.
 - Teach-back caps: concept **150 chars**, explanation **15–1,200 chars**, sources
@@ -273,10 +324,16 @@ the configured Gemini account and terms.
 - Challenge caps: concept **150 chars**, written answer **5–1,200 chars**, sources
   **1–4**, **2 attempts** per challenge, exactly **4** options for choice types.
   Same **45s** timeout.
+- Local progress caps: **500** processed-activity ids (bounded, newest kept), 100
+  concepts and 100 review items per course.
 - The `POST /api/chat`, `POST /api/teach-back`, and both `POST /api/challenge/*`
-  endpoints are public and unauthenticated; a production deployment would need
-  authentication, server-side rate limiting, protected assessment state, and secure
-  challenge sessions. None are added in this prototype.
+  endpoints are public and **unauthenticated**, and there is **no durable global
+  rate limiting** (an in-memory serverless counter would give false assurance, so it
+  is deliberately omitted). Browser-held challenge state is re-validated server-side
+  but is not authoritative. A production deployment would need authentication, a
+  shared-store rate limit, protected assessment state, and secure challenge sessions.
+  None are added in this prototype. Full detail:
+  [`docs/testing-and-security.md`](docs/testing-and-security.md).
 
 ### Not connected yet (later phases)
 
@@ -300,8 +357,14 @@ npm run dev      # http://localhost:3000
 Validation used to close each phase:
 
 ```bash
+npm test          # Vitest unit + route tests (no real Gemini call)
 npm run lint
 npm run build
+npm run verify    # test + lint + build in one command
+
+# End-to-end (Playwright, AI routes mocked). First run downloads Chromium:
+npx playwright install chromium
+npm run test:e2e
 ```
 
 ### Environment
@@ -318,6 +381,8 @@ processing and persistence happen in the browser. The future AI key is
 - [`docs/research-findings.md`](docs/research-findings.md)
 - [`docs/architecture.md`](docs/architecture.md)
 - [`docs/development-plan.md`](docs/development-plan.md)
+- [`docs/testing-and-security.md`](docs/testing-and-security.md) — Phase 11 hardening, test coverage & honest limits
+- [`docs/release-checklist.md`](docs/release-checklist.md) — repeatable release gate
 
 ## Challenge context
 

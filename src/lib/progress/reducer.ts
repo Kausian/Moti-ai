@@ -15,6 +15,7 @@ import {
   LEARNING_PROGRESS_VERSION,
   MAX_CONCEPTS_PER_COURSE,
   MAX_MEMORY_ECHO_ITEMS_PER_COURSE,
+  MAX_PROCESSED_ACTIVITY_IDS,
 } from "./constants";
 import { buildConceptId } from "./concept-id";
 import { applyOutcomeToConcept, toPersistedMastery } from "./mastery-policy";
@@ -38,6 +39,29 @@ export function emptyProgressState(now: Date): LearningProgressState {
 export type ProgressMutation =
   | { ok: true; state: LearningProgressState; alreadySaved?: boolean }
   | { ok: false; reason: string };
+
+/**
+ * Bounds the idempotency ledger. Keeps the newest ids up to the limit, and also
+ * retains any id still referenced by stored concept evidence so visible work
+ * cannot be immediately re-saved. Append order (oldest → newest) is preserved.
+ */
+export function pruneProcessedActivityIds(
+  ids: readonly string[],
+  protectedIds: ReadonlySet<string>,
+  limit: number = MAX_PROCESSED_ACTIVITY_IDS,
+): string[] {
+  if (ids.length <= limit) return [...ids];
+  const newestStart = ids.length - limit;
+  return ids.filter((id, index) => index >= newestStart || protectedIds.has(id));
+}
+
+function evidenceActivityIds(concepts: readonly ConceptProgress[]): Set<string> {
+  const ids = new Set<string>();
+  for (const concept of concepts) {
+    for (const evidence of concept.evidence) ids.add(evidence.activityId);
+  }
+  return ids;
+}
 
 export interface SaveOutcomeContext {
   now: Date;
@@ -141,13 +165,18 @@ export function saveOutcome(
       : [...state.memoryEchoItems, item];
   }
 
+  const processedActivityIds = pruneProcessedActivityIds(
+    [...state.processedActivityIds, outcome.activityId],
+    evidenceActivityIds(concepts),
+  );
+
   return {
     ok: true,
     state: {
       ...state,
       concepts,
       memoryEchoItems,
-      processedActivityIds: [...state.processedActivityIds, outcome.activityId],
+      processedActivityIds,
       updatedAt: context.now.toISOString(),
     },
   };

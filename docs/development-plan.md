@@ -432,6 +432,57 @@ course, locally and on Vercel.
 
 ---
 
+## Phase 10 — Learning Constellation (intentionally skipped)
+
+A concept-relationship visualisation. **Deliberately not built.** The project
+skipped from Phase 9 straight to Phase 11; nothing depends on it.
+
+---
+
+## Phase 11 — reliability, security hardening & final regression (current)
+
+**Goal:** make the existing prototype sturdier and prove it against malformed,
+oversized, adversarial, and failing conditions. **No new learning functionality.**
+
+**Deliverables**
+- One shared, bounded JSON request reader for all four AI routes
+  (`src/lib/http/`): content-type → **415**, over-limit (128 KiB, streamed UTF-8
+  bytes, cancelled on overflow) → **413**, malformed JSON → **400**. Every AI
+  response `Cache-Control: no-store`; safe public error payloads only.
+- Baseline security headers on every route (`nosniff`, `X-Frame-Options: DENY`,
+  `Referrer-Policy`, `Permissions-Policy`, `COOP`); a strict CSP deferred as
+  documented future work.
+- Bounded `processedActivityIds` ledger (cap 500, newest + evidence-referenced
+  retained).
+- App-level error boundary (`src/app/error.tsx`) — calm recovery, no stack trace,
+  no storage wipe.
+- Regression tests: shared-HTTP suite, route-level tests for all four endpoints
+  (415/413/400/no-store/cancellation/timeout/safe errors, Gemini mocked), named
+  prompt-injection & source-grounding tests, and a focused Playwright E2E suite
+  (app smoke, grounded chat, error recovery) that intercepts the AI routes.
+- New docs: `docs/testing-and-security.md`, `docs/release-checklist.md`.
+
+**Dependencies:** all prior phases (except the skipped Phase 10).
+
+**Explicitly out of scope:** new learning modes/challenge types, another Gemini
+route, another provider, auth, cloud storage, server DB, production global rate
+limiting, analytics, monitoring, service workers, visual redesign.
+
+**Validation:** `npm test` (474 unit + route), `npm run test:e2e` (3 Playwright),
+`npm run lint`, `npm run build` all pass; **no automated test calls the real
+Gemini API**; no key in the client bundle; no raw provider error reaches the UI.
+
+**Definition of done:** the completion checklist in the Phase 11 brief is met and
+the remaining security limits are documented honestly (unauthenticated endpoints,
+no durable global rate limiting, browser challenge state not authoritative, prompt
+injection mitigated not solved, localStorage not encrypted, no CSP yet).
+
+> **Note on numbering:** Phase 12 handles final visual polish & accessibility;
+> Phase 13 handles deployment & submission. (The older "Phase 10 — Polish, demo &
+> deployment" section above predates this renumbering.)
+
+---
+
 ## Cross-phase risks
 
 - **Free-tier AI limits** may throttle demos — keep requests lean.

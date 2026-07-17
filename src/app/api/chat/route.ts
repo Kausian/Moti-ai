@@ -5,61 +5,31 @@
 // Retrieval itself already happened locally in the browser; this endpoint does
 // not read documents or perform search.
 
-import type { ChatErrorPayload, MotiStructuredResponse } from "@/lib/types";
 import { validateChatRequest } from "@/lib/chat/validate-chat-request";
-import { MAX_REQUEST_BODY_BYTES } from "@/lib/chat/constants";
+import { readJsonRequest } from "@/lib/http/read-json-request";
+import { jsonError, jsonErrorForCode, jsonOk } from "@/lib/http/safe-json-response";
 import { generateMotiResponse } from "@/lib/ai/generate-moti-response";
 import { isAiConfigured } from "@/lib/ai/gemini-client";
 import { REQUEST_TIMEOUT_MS } from "@/lib/ai/constants";
-import {
-  errorPayload,
-  mapAiError,
-  statusForCode,
-} from "@/lib/ai/error-mapping";
+import { errorPayload, mapAiError } from "@/lib/ai/error-mapping";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-function errorResponse(payload: ChatErrorPayload): Response {
-  return Response.json(
-    { error: payload },
-    { status: statusForCode(payload.code), headers: { "Cache-Control": "no-store" } },
-  );
-}
-
-function successResponse(response: MotiStructuredResponse): Response {
-  return Response.json(
-    { response },
-    { status: 200, headers: { "Cache-Control": "no-store" } },
-  );
-}
-
 export async function POST(request: Request): Promise<Response> {
   if (!isAiConfigured()) {
-    return errorResponse(errorPayload("not-configured"));
+    return jsonErrorForCode("not-configured");
   }
 
-  let rawBody: string;
-  try {
-    rawBody = await request.text();
-  } catch {
-    return errorResponse(errorPayload("invalid-request"));
-  }
-  if (rawBody.length > MAX_REQUEST_BODY_BYTES) {
-    return errorResponse(errorPayload("invalid-request"));
+  const body = await readJsonRequest(request);
+  if (!body.ok) {
+    return jsonErrorForCode(body.error.code);
   }
 
-  let parsedBody: unknown;
-  try {
-    parsedBody = JSON.parse(rawBody);
-  } catch {
-    return errorResponse(errorPayload("invalid-request"));
-  }
-
-  const validation = validateChatRequest(parsedBody);
+  const validation = validateChatRequest(body.value);
   if (!validation.ok) {
     // Return a generic message; validation internals are never exposed.
-    return errorResponse(errorPayload("invalid-request"));
+    return jsonErrorForCode("invalid-request");
   }
 
   const timeoutSignal = AbortSignal.timeout(REQUEST_TIMEOUT_MS);
@@ -67,15 +37,13 @@ export async function POST(request: Request): Promise<Response> {
 
   try {
     const response = await generateMotiResponse(validation.value, { signal });
-    return successResponse(response);
+    return jsonOk({ response });
   } catch (error) {
     // Client disconnected/cancelled: nothing to return; the client discards it.
     if (request.signal.aborted && !timeoutSignal.aborted) {
       return new Response(null, { status: 499 });
     }
-    const payload = timeoutSignal.aborted
-      ? errorPayload("timeout")
-      : mapAiError(error);
-    return errorResponse(payload);
+    const payload = timeoutSignal.aborted ? errorPayload("timeout") : mapAiError(error);
+    return jsonError(payload);
   }
 }

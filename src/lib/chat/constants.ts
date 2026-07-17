@@ -15,7 +15,4 @@ export const MAX_SOURCES = 4;
 export const MAX_SOURCE_CONTENT_LENGTH = 1500;
 export const MAX_TOTAL_SOURCE_CONTEXT = 6000;
 
-/** Reject obviously oversized bodies before parsing/validating in detail. */
-export const MAX_REQUEST_BODY_BYTES = 64 * 1024;
-
 export const LEARNER_LEVELS = ["beginner", "intermediate", "advanced"] as const;

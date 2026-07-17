@@ -274,6 +274,8 @@ export interface MotiStructuredResponse {
 
 export type ChatErrorCode =
   | "invalid-request"
+  | "payload-too-large"
+  | "unsupported-media-type"
   | "not-configured"
   | "auth-failed"
   | "model-unavailable"

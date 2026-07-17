@@ -25,6 +25,8 @@ export class AiError extends Error {
 
 const USER_MESSAGES: Record<ChatErrorCode, string> = {
   "invalid-request": "Please check your question and try again.",
+  "payload-too-large": "That request was too large. Please shorten it and try again.",
+  "unsupported-media-type": "The request format was not understood. Please try again.",
   "not-configured": "AI conversation is not configured on this deployment.",
   "auth-failed": "The AI service could not authenticate. Check the server configuration.",
   "model-unavailable": "The configured AI model is currently unavailable.",
@@ -37,6 +39,8 @@ const USER_MESSAGES: Record<ChatErrorCode, string> = {
 
 const HTTP_STATUS: Record<ChatErrorCode, number> = {
   "invalid-request": 400,
+  "payload-too-large": 413,
+  "unsupported-media-type": 415,
   "not-configured": 503,
   "auth-failed": 500,
   "model-unavailable": 503,

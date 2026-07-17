@@ -758,14 +758,45 @@ AI-driven concept detection is later work.
   routes are unauthenticated and rate-limited only by the provider quota.
   Production would need authentication, server-side rate limiting, protected
   assessment state, and secure challenge sessions; none are added in this phase.
+- **Shared HTTP hardening (Phase 11):** all four AI routes read their untrusted
+  body through one bounded reader (`src/lib/http/read-json-request.ts`):
+  content-type must be JSON (else **415**); the body is read from the stream with a
+  **128 KiB** budget measured in **UTF-8 bytes** and **cancelled** on overflow
+  (else **413**); a present `Content-Length` over the limit short-circuits to 413
+  but is never trusted alone; malformed JSON is **400**. The raw body is never
+  logged or echoed in an error. Every AI response is `Cache-Control: no-store`
+  (`src/lib/http/safe-json-response.ts`), and all error bodies use the safe public
+  `{ error: { code, message, retryable } }` shape — never a raw provider message,
+  stack, or secret.
+- **Baseline security headers (Phase 11):** `next.config.ts` applies `nosniff`,
+  `X-Frame-Options: DENY`, `Referrer-Policy: strict-origin-when-cross-origin`,
+  a locked-down `Permissions-Policy`, and `Cross-Origin-Opener-Policy: same-origin`
+  to every route (`src/lib/http/security-headers.ts`). **No Content-Security-Policy
+  is set** — a strict nonce-based CSP cannot be applied cleanly to the prototype's
+  inline framework/runtime and the Three.js `<Canvas>`, so it is documented future
+  work rather than shipped brittle.
+- **No durable global rate limiting (Phase 11):** there is a 45s per-request
+  timeout and strict size/shape caps, but **no** cross-request limiter. An
+  in-memory serverless counter would reset per instance and give false assurance,
+  so it is deliberately omitted; production would use a shared store or edge/WAF
+  limit. See `docs/testing-and-security.md`.
+- **Bounded local ledger (Phase 11):** `processedActivityIds` is capped at 500
+  (newest kept, plus ids still referenced by stored evidence) so local progress
+  cannot grow without limit; an extremely aged-out duplicate may no longer be
+  recognised, which at worst adds one extra evidence entry within the per-concept
+  cap and never corrupts a concept or review item.
+- **App error boundary (Phase 11):** `src/app/error.tsx` shows a calm recovery
+  screen (Try again / Reload) without a stack trace and **without** touching
+  localStorage — a render error never wipes the saved course or progress.
 
 ## Planned module structure
 
 ```
-# Present structure (through Phase 9 — persisted progress)
+# Present structure (through Phase 11 — reliability & security hardening)
 src/
   app/
     layout.tsx            # root layout, fonts, metadata
+    error.tsx             # app-level error boundary (calm recovery, no storage wipe)
     page.tsx              # CourseConfiguration + LearningProgress providers + shell
     globals.css           # Tailwind v4 theme + brand tokens + motion
     api/chat/route.ts               # POST-only grounded conversation (Node runtime)
@@ -820,6 +851,10 @@ src/
                           #   format-date, clock-store  (pure + client-safe)
     grounding/            # answer-activity — the shared "is this answer eligible?"
                           #   + concept-title rules used by Mirror AND challenges
+    http/                 # shared AI-route hardening: constants (128 KiB limit),
+                          #   read-json-request (bounded reader → 415/413/400),
+                          #   safe-json-response (no-store helpers), request-errors,
+                          #   security-headers (baseline headers for next.config)
     chat/                 # constants, validate-chat-request, conversation-history,
                           #   ai-consent (shared session acknowledgement)
     ai/                   # constants, gemini-client, moti-system-instruction,
@@ -841,11 +876,16 @@ src/
                           #   (+ combineAvatarSignals), animation-config
                           #   (pure, no three import → WebGL-free tests)
 
-# Automated tests (Vitest, dev-only): co-located *.test.ts under lib/chunking,
-# lib/retrieval, lib/chat, lib/ai, lib/mirror, lib/challenge, lib/progress,
-# lib/storage, and lib/avatar; run with `npm test`. No test calls the real Gemini
-# API and no test creates a WebGL context — the generation, mapping, policy,
-# progress, and activity-state boundaries are pure/mockable (time is injected).
+# Automated tests (Vitest, dev-only, 474): co-located *.test.ts under lib/chunking,
+# lib/retrieval, lib/chat, lib/ai, lib/http, lib/mirror, lib/challenge, lib/progress,
+# lib/storage, lib/avatar, and app/api/*/route.test.ts (route handlers with Gemini
+# mocked); run with `npm test`. No test calls the real Gemini API and no test
+# creates a WebGL context — the generation, mapping, policy, progress, HTTP, and
+# activity-state boundaries are pure/mockable (time is injected).
+#
+# End-to-end (Playwright, dev-only, 3): tests/e2e/*.spec.ts — app smoke, grounded
+# chat, error recovery. `npm run test:e2e` starts the dev server and intercepts
+# every /api/** call with fixtures, so no E2E test calls the real Gemini API.
 ```
 
 _Moti Mirror reuses `lib/ai/error-mapping.ts` rather than adding a parallel

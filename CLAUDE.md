@@ -94,7 +94,24 @@ away from them without an explicit decision recorded here.
   `@theme` colour tokens + entrance animation). Style with these tokens; do not
   scatter raw hex colours across components.
 - **`pdfjs-dist`** — client-side PDF text extraction (Phase 3).
-- **`vitest`** (dev-only) — unit tests for pure chunking/retrieval/AI logic.
+- **`vitest`** (dev-only) — unit tests for pure chunking/retrieval/AI logic, plus
+  route-handler tests with the Gemini boundary mocked.
+- **`@playwright/test`** (dev-only, Phase 11) — focused end-to-end tests in
+  `tests/e2e/`. They **must** intercept every `/api/**` call with deterministic
+  fixtures (`page.route`) and **never** call the real Gemini API. Run via
+  `npm run test:e2e` (not part of `npm run verify`, to avoid a browser download in
+  CI). Config in `playwright.config.ts`; artifacts are git-ignored.
+- **Shared HTTP hardening (Phase 11)** lives in **`src/lib/http/`** and is the ONLY
+  way the four AI routes read a request body. `readJsonRequest` enforces
+  content-type (**415**), a **128 KiB** UTF-8 byte cap read from the stream and
+  cancelled on overflow (**413**), and JSON validity (**400**); it never logs or
+  echoes the raw body. `safe-json-response` makes every AI response
+  `Cache-Control: no-store` with safe public error payloads only. Do **not**
+  re-add per-route body parsing. Baseline security headers come from
+  `security-headers.ts` via `next.config.ts`; **no CSP** is added (a strict
+  nonce-based production CSP is documented future work). There is deliberately **no
+  durable global rate limiter** — do not add an in-memory serverless counter and
+  claim it provides one.
 - **`@google/genai` 2.12.0** — official Gemini SDK, used **only** server-side in
   `src/app/api/chat/route.ts` via the **`ai.models.generateContent`** API (not the
   Interactions API — see `docs/research-findings.md`). Structured JSON output via
