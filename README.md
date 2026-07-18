@@ -2,443 +2,512 @@
 
 **Learn actively. Understand deeply. Remember longer.**
 
-Moti AI is a source-grounded virtual learning coach. Its assistant, **Moti**,
-turns your own course material into an active-learning experience built around a
-simple loop: **Think → Explain → Correct → Remember**. Instead of handing over
-answers, Moti grounds every response in your uploaded sources, asks you to
-explain concepts back in your own words, corrects misconceptions, and helps you
-remember through spaced review — with a friendly animated 3D assistant alongside.
+Moti AI is a source-grounded virtual learning coach that helps learners move from
+passively reading material to actively explaining, practising, and reviewing
+concepts. Instead of answering from general knowledge, its assistant — **Moti** —
+grounds every response in the learner's own uploaded material, asks them to explain
+ideas back in their own words, corrects misconceptions against the source, and
+schedules lightweight recall.
 
-## Planned key features
+The whole experience is built around one signature loop:
 
-- **Configurable assistant instructions** — shape Moti's persona and behaviour.
-- **Configurable learning knowledge** — supply the grounded source set.
-- **PDF, TXT & Markdown input** — learn from your own material.
-- **Source-grounded conversation** — answers stay within your sources, and Moti
-  says so when they don't cover a question.
-- **Moti Mirror** — teach-back: explain a concept in your own words.
-- **Misconception detection & correction** — gaps caught and fixed against source.
-- **Adaptive micro-challenges** — practice pitched to your current level.
-- **Mastery Journey** — track concepts as exploring, developing, or understood.
-- **Memory Echo** — a spaced review queue for what you've learned.
-- **Animated 3D assistant** — Moti reacts to the interaction.
+**Think → Explain → Correct → Remember**
 
-## Planned technology stack
+> **Live demo:** not yet deployed.
+> **Demo video:** not yet available.
+> **Repository:** https://github.com/Kausian/Moti-ai
 
-- **Next.js (App Router, v16)** + **React** + **TypeScript**
-- **Tailwind CSS v4** (CSS-based config)
-- **Next.js Route Handlers** for all server logic
-- **Google Gemini API** (free tier), called **server-side only**
-- **React Three Fiber + Three.js** for the 3D assistant
-- **PDF.js** for client-side PDF text extraction
-- **Browser localStorage** for prototype persistence
-- **Vercel** for deployment
+---
 
-> Feature-specific dependencies (React Three Fiber, Three.js, PDF.js, Gemini)
-> are added in the phase that first uses them, not before.
+## Overview
 
-## Development status
+A learner works through Moti AI in a single, coherent flow:
 
-**Phase 12 — final UI polish, accessibility & 3D readiness (current).** No new
-learning features and no change to the learning architecture, persistence, or
-security — this phase makes the product feel calm, coherent, and submission-ready.
+1. **Configure a course** — set a title, learning objective, learner level, and the
+   instructions that shape how Moti coaches.
+2. **Add source material** — upload or paste PDF, TXT, or Markdown. Documents are
+   processed entirely in the browser.
+3. **Ask grounded questions** — Moti answers from selected excerpts of the material
+   and says so honestly when the sources don't cover a question.
+4. **Review the sources** — every grounded answer exposes the exact plain-text
+   excerpts it was built from.
+5. **Practise actively** — teach a concept back through **Moti Mirror**, or take a
+   source-grounded **micro-challenge**.
+6. **Save validated outcomes** — nothing is recorded automatically; the learner
+   chooses what to keep.
+7. **Track and review** — saved work builds a **Mastery Journey**, and a local
+   **Memory Echo** queue brings concepts back for spaced recall.
 
-What this phase adds:
+---
 
-- **A semantic design-token layer** in `globals.css` — role-named tokens
-  (`--surface-*`, `--text-*`, `--border-*`, `--status-*`, `--focus-ring`, shadow,
-  radius, transition, and content-width tokens) layered over the existing warm
-  brand palette (nothing renamed, nothing broken), exposed as Tailwind utilities.
-- **Shared UI primitives** (`src/components/ui/`) — `Button` (primary / secondary /
-  ghost / destructive, comfortable touch targets, visible focus, no-shift loading),
-  `SectionHeader`, `InlineNotice` (tone by icon + text, not colour alone), and
-  `EmptyState` — adopted where duplication was real.
-- **A header AI-status pill** — high-level availability (AI ready / not configured /
-  usage limit / unavailable) by dot **and** text; the model name stays out of the
-  normal UI.
-- **Readability & consistency** — comfortable base line-height for long answers,
-  consistent eyebrow labels, wrapped long concept/source titles, clearer mobile
-  active tab, and larger touch targets.
-- **Hardened reduced-motion** — a shared CSS strategy neutralises decorative motion,
-  transitions, and smooth scrolling under `prefers-reduced-motion`, on top of the
-  existing JS hook. Celebration stays a static positive avatar state.
-- **3D readiness** — the avatar keeps one Canvas, its no-SSR code split, the
-  error boundary, and the 2D fallback. **The submission uses the procedural 3D Moti
-  assistant; a local GLB replacement is documented as a deferred optional step**
-  (no such asset is bundled — see below).
-- **Accessibility & responsive regression** — 6 new Playwright checks (no
-  horizontal overflow across 320–1440px, one Canvas, mobile panel switching keeps
-  the composer draft, keyboard reachability, Settings focus-trap + restoration,
-  source preview above the Canvas, reduced-motion keeps status text). **9 E2E total.**
-- **Automated tests** — **481 Vitest** (unit + route) and **9 Playwright** E2E.
-  **No test calls the real Gemini API.**
+## Key Features
 
-> **Custom 3D model:** The submission currently uses the procedural 3D Moti
-> assistant. The avatar architecture supports a future local
-> `public/models/moti.glb` replacement (GLTFLoader → procedural Moti → 2D fallback),
-> but visual-asset replacement was intentionally not allowed to delay product
-> completion, and no model was bundled.
+### Source-grounded learning
+- PDF, TXT, and Markdown ingestion with in-browser text extraction.
+- Deterministic local chunking and a lexical (BM25-inspired) retrieval index.
+- Answers grounded in selected source excerpts, with an honest
+  "the sources don't cover this" response when appropriate.
+- Plain-text source previews attached to each grounded answer.
+- A **Grounding Lab** that lets the learner inspect retrieval transparently.
 
-> Phase 10 (Learning Constellation) was **intentionally skipped**; Phase 13 handles
-> deployment & submission.
+### Active learning
+- **Moti Mirror** teach-back — explain a concept in your own words and receive
+  structured, source-grounded feedback.
+- The full **Think → Explain → Correct → Remember** loop drives the interaction.
+- Four micro-challenge types: **multiple-choice**, **scenario**,
+  **correct-the-mistake**, and **explain-in-your-own-words**.
+- Two-attempt feedback: a first miss earns a targeted hint and a retry; the second
+  reveals the full grounded explanation.
 
-<details>
-<summary><strong>Phase 11 — reliability & security hardening (complete)</strong></summary>
+### Progress and review
+- Explicit **"Save to learning journey"** — results are kept only on the learner's
+  action.
+- Mastery recommendations grouped as **Exploring / Developing / Understood**.
+- A **Needs Review** flag instead of punishing a single weaker attempt.
+- Local, versioned persistence with multi-course isolation.
+- A **Memory Echo** recall queue with learner-controlled review decisions
+  (I remembered / Needs more practice / Review tomorrow).
 
-No new learning features — this phase makes the existing prototype sturdier and
-tests it against malformed, oversized, adversarial, and failing conditions.
+### Experience and reliability
+- An interactive, procedurally-modelled **3D Moti** assistant with distinct visual
+  states.
+- A responsive three-panel workspace (assistant · conversation · journey).
+- Reduced-motion support and a 2D fallback when WebGL is unavailable.
+- Safe error mapping, request cancellation, and a calm app-level error boundary.
+- Accessibility-focused controls: semantic headings, labelled inputs, native radio
+  groups, visible focus, and status conveyed in text (never colour alone).
 
-What this phase added:
+---
 
-- **One shared, bounded JSON reader** (`src/lib/http/`) for every AI route, with
-  proper HTTP status codes: **415** for a wrong/missing content type, **413** for
-  an oversized body (checked against a **128 KiB** cap by streamed UTF-8 bytes, not
-  string length, and cancelled mid-stream on overflow), **400** for malformed JSON.
-  Every AI response is `Cache-Control: no-store`, and error bodies stay safe and
-  public — never a raw provider message, stack trace, or secret.
-- **Baseline security headers** on every route (`nosniff`, `X-Frame-Options: DENY`,
-  a strict `Referrer-Policy`, a locked-down `Permissions-Policy`, and
-  `Cross-Origin-Opener-Policy`). A strict production CSP is documented as future
-  work rather than shipped brittle.
-- **A bounded idempotency ledger** — `processedActivityIds` is capped at 500 so
-  local progress can't grow without limit, keeping the newest ids (and any still
-  referenced by stored evidence).
-- **An app-level error boundary** (`src/app/error.tsx`) — a calm recovery screen
-  with Try again / Reload that never exposes a stack trace and never wipes your
-  saved course or progress.
-- **Named prompt-injection & source-grounding regression tests**, a **shared-HTTP
-  test suite**, **route-level tests** for all four endpoints (415/413/400/no-store/
-  cancellation/timeout/safe errors, with Gemini mocked), and a focused **Playwright**
-  E2E suite (app smoke, grounded chat, error recovery) that intercepts the AI routes
-  with fixtures.
-- **Automated tests** — **474 Vitest** (unit + route) and **3 Playwright** E2E.
-  **No test — unit, route, or E2E — calls the real Gemini API.**
+## Research Process & Findings
 
-Honest limits kept in view: the endpoints are **unauthenticated**, there is **no
-durable global rate limiting**, browser-held challenge state is re-validated but not
-authoritative, prompt injection is **mitigated not solved**, and localStorage is
-**not encrypted**. See [`docs/testing-and-security.md`](docs/testing-and-security.md)
-and [`docs/release-checklist.md`](docs/release-checklist.md).
+### Product and learning research
+Passive study tends to produce shallow, short-lived understanding. Moti AI is built
+around better-established practices: **retrieval practice**, **teach-back** (explaining
+a concept aloud to expose hidden gaps), **immediate grounded feedback**, and **spaced
+review**. One product choice follows directly: mastery is an understandable
+**recommendation** rather than a fabricated score, because a prototype cannot honestly
+certify learning outcomes.
 
-</details>
+### AI grounding research
+A generic chatbot is a poor coach — it answers from general knowledge and can invent
+facts beyond the material. Moti AI treats grounding as a system property: documents are
+chunked locally and searched with a transparent lexical index, only a few **selected
+excerpts** reach the model, returned source IDs are **re-validated** against what was
+supplied, and every response is validated as **structured JSON**. Chat, teach-back, and
+challenges each use their own contract rather than one overloaded endpoint.
 
-<details>
-<summary><strong>Phase 9 — persisted Mastery Journey & Memory Echo (complete)</strong></summary>
+### Privacy and reliability research
+Because uploaded material can be sensitive, documents are processed in the browser and
+the full collection is never transmitted — only the minimal data needed for a task
+reaches the model, and only minimal metadata is stored locally. Request bodies are
+bounded and validated, provider errors are mapped to safe public messages, and baseline
+security headers are applied, while the honest limits are documented rather than hidden.
 
-The right-hand panels stop being mock-ups: finish a Moti Mirror or Micro-Challenge,
-choose **"Save to learning journey"**, and your progress is recorded — in this
-browser only — and comes back for review.
+### Key findings
+- **Grounding requires validation *after* generation.** Structured output is not
+  trustworthy simply because it is JSON — fields, lengths, and source IDs must be
+  re-checked server-side.
+- **Active learning needs different interaction contracts from chat.** Teach-back and
+  challenges deliberately send no conversation history and carry their own schemas.
+- **Mastery should be a recommendation, not a formal score.** Presenting confident
+  percentages would misrepresent what a prototype can measure.
+- **One weak result should not erase stronger evidence.** A later shaky attempt flags
+  *Needs Review* rather than downgrading a concept.
+- **Transparent limitations increase credibility.** Naming what is *not* protected is
+  more trustworthy than implying guarantees.
 
-What works in this phase:
+More detail: [`docs/research-findings.md`](docs/research-findings.md).
 
-- **Progress you choose to keep.** Nothing is saved automatically. Validated
-  feedback offers **"Save to learning journey"**, so what gets recorded is your
-  decision, not a side effect of asking a question.
-- **A real Mastery Journey** — concepts grouped as Exploring / Developing /
-  Understood, with honest counts (no percentages, points, or streaks), the last
-  activity, and the source it came from.
-- **Mastery that doesn't punish practice.** A weaker later result **never
-  downgrades** a concept — it flags **"Needs review"** instead. One shaky attempt
-  shouldn't erase something you've already shown you understand; a later solid
-  result clears the flag.
-- **A real Memory Echo queue** — Due now / Review later / Completed, with a simple
-  schedule (weaker understanding returns sooner). Practise a prompt, then tell Moti
-  how it went: **I remembered**, **Needs more practice**, or **Review tomorrow**.
-- **No AI in review.** The optional recall box is scratch space in the page — never
-  saved, never sent anywhere, and nothing grades it. You decide.
-- **It survives a reload**, saving twice is impossible (idempotent), and resetting
-  progress names the course, spares your documents and settings, and never touches
-  another course's data.
-- **Automated tests** (Vitest, **414 total**) — course-identity migration, storage
-  validation, concept ids, the mastery policy, review scheduling, selectors, the
-  reducer, and the privacy boundary. **No test calls the real API.**
+---
 
-> **Privacy:** only minimal learning metadata is stored — concept, mastery,
-> activity type/outcome, source ids and labels, timestamps, and the review prompt.
-> Your explanations, written answers, full AI feedback, chat, and source excerpts
-> are **never** persisted, and progress is **never** sent to Gemini.
->
-> **Limitation:** localStorage is readable by any script on the same origin and is
-> not encrypted. A production system handling real educational records would need
-> authenticated server-side storage — there is no cloud sync here.
+## Design & Architecture
 
-</details>
+Moti AI is a single Next.js (App Router) application. The browser owns ingestion,
+retrieval, the UI, and local persistence; the server owns the API key, the model, and
+grounding assembly. All AI traffic flows through Route Handlers — the browser never
+calls Gemini directly and never sees the key.
 
-<details>
-<summary><strong>Phase 8 — adaptive micro-challenges (complete)</strong></summary>
+```mermaid
+flowchart LR
+    A[Course documents] --> B[Browser-side extraction]
+    B --> C[Chunking and lexical index]
+    D[Learner question] --> E[Local retrieval]
+    C --> E
+    E --> F[Validated source excerpts]
+    F --> G[Next.js AI Route Handler]
+    G --> H[Gemini]
+    H --> I[Structured response validation]
+    I --> J[Grounded learning UI]
+    J --> K[Moti Mirror or Micro-Challenge]
+    K --> L[Save validated outcome]
+    L --> M[Local Mastery Journey and Memory Echo]
+```
 
-Pick a grounded answer, choose **"Challenge me"**, and Moti sets a focused practice
-task built only from that answer's sources — then marks your response and
-celebrates a genuine win.
+### Architectural boundaries
+Four server Route Handlers, each with its own validator and structured schema:
 
-- **Four challenge types** — multiple choice, scenario, correct the mistake, and
-  explain in your own words. Or pick **Surprise me** and let Moti choose.
-- **Difficulty** — Recommended (your configured level), Beginner, Intermediate, or
-  Advanced. It shapes how the challenge is *written*; it is not a measure of your
-  ability, and the UI says so.
-- **Marking that fits the question** — multiple-choice and scenario answers are
-  marked **deterministically on the server with no AI call** (comparing two option
-  ids needs no model); free-text answers are marked by Gemini against the reference
-  answer, essential points, and sources.
-- **Two attempts, with a real hint** — a first wrong answer earns a targeted nudge
-  and a Retry *without* revealing the answer; the second reveals the full grounded
-  explanation and points you at the source. You can reveal the answer early, but
-  that ends the challenge without a win.
-- **Moti celebrates** — the `celebrating` state is finally earned, and **only** by a
-  validated correct answer. A new request or an error interrupts it immediately; a
-  wrong answer never celebrates.
-- **Honest boundaries** — *"This recommendation has not yet changed your Mastery
-  Journey"* and *"This review prompt is not saved or scheduled yet."* Neither the
-  Mastery Journey nor the Memory Echo queue is mutated.
-- **Automated tests** (Vitest, **320 total**) — request and challenge validation,
-  prompt layering and injection containment, the deterministic marking rules, the
-  attempt policy, the activity state machine, and celebrating-state combination.
-  **No test calls the real API.**
+| Route | Responsibility |
+| --- | --- |
+| `POST /api/chat` | Grounded conversation over selected excerpts. |
+| `POST /api/teach-back` | Moti Mirror evaluation of a learner explanation. |
+| `POST /api/challenge/generate` | Writes one source-grounded challenge. |
+| `POST /api/challenge/evaluate` | Marks a challenge answer. |
 
-> Limitations: this is a **learning prototype, not a secure exam**. The answer key
-> is held in client state between generating and marking, so a technically
-> knowledgeable learner could inspect it — real assessment would need server-side
-> challenge sessions. There is no grading, score, or ability measurement, and
-> challenge results are in-memory only.
+They are kept **separate on purpose**. Each has a distinct request shape, prompt,
+response schema, and consistency rules — teach-back and challenges send no
+conversation history and require at least one validated source, and free-response
+marking differs from deterministic choice marking. Overloading a single endpoint with
+mode flags would couple unrelated contracts and weaken every validator. Each route runs
+on the Node runtime, is uncached, reads its body through one shared bounded reader, and
+returns `Cache-Control: no-store` with safe public error payloads.
 
-<details>
-<summary><strong>Phase 7 — Moti Mirror teach-back (complete)</strong></summary>
+### Data flows
+1. **Grounded chat** — the browser retrieves excerpts locally, sends the question,
+   recent history, course settings, and up to four excerpts to `/api/chat`; the server
+   builds the grounded prompt, calls Gemini, validates the structured answer (including
+   re-checking cited source IDs), and returns it.
+2. **Moti Mirror** — the learner's explanation plus the selected answer's excerpts go
+   to `/api/teach-back` (no chat history); the server returns structured feedback and a
+   mastery recommendation. The recommendation does not mutate saved progress on its own.
+3. **Micro-challenges** — `/api/challenge/generate` produces one grounded challenge;
+   `/api/challenge/evaluate` marks it. Choice challenges are marked deterministically on
+   the server without any model call; free-response answers are marked by Gemini against
+   the reference answer and essential points.
+4. **Learning-progress persistence** — when the learner chooses **Save to learning
+   journey**, a validated outcome is written to versioned local storage as a pure,
+   idempotent state transition. This data is never sent to Gemini or any Route Handler.
 
-The learning loop is real: **Think → Explain → Correct → Remember**. Pick a
-grounded answer, choose **"Teach it back"**, explain the concept in your own words,
-and Moti coaches your explanation against *only* that answer's sources.
+More detail: [`docs/architecture.md`](docs/architecture.md).
 
-- **A real teach-back activity** — inline, anchored to the answer it belongs to.
-  Moti asks you to explain the concept; you write it in your own words.
-- **Structured, source-grounded coaching** — what you understood, what is missing,
-  misconceptions (your idea paraphrased + the correction), a clearer explanation,
-  a mastery recommendation with its rationale, the supporting sources, a
-  recommended next action, and one Memory Echo recall prompt.
-- **A documented rubric** — exploring / developing / understood / not-evaluated.
-  Moti judges **conceptual understanding only**: spelling, grammar, style, and
-  length are explicitly not criteria, so a short accurate explanation can be
-  *understood* and a long fluent but wrong one is not.
-- **A separate `POST /api/teach-back`** — its own request, rubric prompt, schema,
-  and validation. It sends **no conversation history** and requires **at least one
-  validated source**, so an explanation is never evaluated ungrounded.
-- **Honest boundaries** — the recommendation is labelled *"a prototype learning
-  recommendation [that] has not yet changed your Mastery Journey"*, and the recall
-  prompt is labelled *"not scheduled or saved yet"*. Neither the Mastery Journey
-  nor the Memory Echo queue is mutated.
-- **Real failure handling** — categorised errors with **Retry** that preserves your
-  explanation, **Cancel** for an in-flight evaluation, and never a fabricated
-  feedback card.
-- **The loop drives the UI** — the AssistantPanel's stage and current concept
-  follow the real activity, and 3D Moti reacts (thinking while evaluating,
-  explaining on feedback, error on failure, listening while you write).
-- **Automated tests** (Vitest, **190 total**) — request validation, prompt layering
-  and injection containment, response validation and per-mode consistency, the
-  activity state machine, and avatar-state combination. **No test calls the real API.**
+---
 
-> Limitations: the mastery result is a **recommendation only** — it is not a formal
-> or certified assessment, produces no scores or percentages, and changes no
-> tracked state. Teach-back results are in-memory only. Adaptive challenges are
-> Phase 8; applying mastery and scheduling review are Phase 9.
+## Design Decisions
 
-<details>
-<summary><strong>Phase 6 — interactive 3D Moti assistant (complete)</strong></summary>
+**Local-first document processing.** Documents are parsed in the browser so complete
+uploaded files are never sent to Gemini — only selected excerpts leave the device.
 
-The static placeholder is replaced by a lightweight, **procedurally modelled** 3D
-Moti (React Three Fiber + Three.js) that reacts to real conversation state.
+**Lexical retrieval before embeddings.** Deterministic lexical retrieval was chosen for
+prototype transparency, predictability, zero external cost, and easy inspection.
+Embeddings are a documented upgrade path, not a current dependency.
 
-- **A polished 3D character** built entirely from Three.js primitives — **no
-  external model, texture, image, or animation asset** is loaded.
-- **Six visual states** (`idle / listening / thinking / explaining / celebrating /
-  error`) driven by real conversation behaviour: **Thinking** while Gemini
-  processes, **Explaining** briefly after a successful answer, **Error** after a
-  failure, **Listening** while you compose, **Idle** otherwise. (`celebrating` is
-  implemented but reserved for a later challenge-success phase.)
-- **Client-only rendering** — one `<Canvas>` loaded via `next/dynamic` with
-  `ssr: false`; nothing touches WebGL during server rendering and the build needs
-  no browser.
-- **Accessibility** — the WebGL scene is decorative; Moti's state is exposed as
-  normal HTML (label, description, polite live-region announcement).
-- **Reduced motion** — `prefers-reduced-motion` holds static, state-distinct poses
-  and pauses continuous animation; state is never conveyed by motion alone.
-- **Graceful fallback** — an on-brand 2D Moti (behind an error boundary + WebGL
-  check) covers absent/failed WebGL; the conversation keeps working.
-- **Lightweight** — capped DPR, low geometry, a single Canvas, and a frame loop
-  paused when the avatar is offscreen or the tab is hidden.
-- **Automated tests** — the pure conversation→state mapping and animation config
-  are unit-tested (Vitest, **96 total**); no test creates a WebGL context.
-- Everything from Phases 3–5 (configuration, ingestion, retrieval, Grounding Lab,
-  and the real Gemini conversation) still works.
+**Selected excerpts only.** A small, capped set of validated excerpts is sent per
+request rather than whole documents.
 
-> Known limitation: the 3D scene needs a normally-rendering browser with a working
-> `ResizeObserver`; some automated/headless preview tools throttle it and won't
-> initialize the scene, but real browsers render it. The current concept shown in
-> the panel is still a static label (not AI-derived) in this phase.
+**Separate AI contracts.** Chat, teach-back, challenge generation, and free-response
+evaluation use independent request/response contracts and schemas.
 
-<details>
-<summary><strong>Phase 5 — Gemini-grounded conversation (complete)</strong></summary>
+**Structured outputs plus runtime validation.** Model output is validated field by
+field and never trusted simply because it is JSON; invented or duplicate source IDs are
+removed before anything reaches the UI.
 
-The conversation panel is live: ask a question, Moti retrieves the relevant source
-sections **locally**, then a secure server route sends only those excerpts to
-**Google Gemini** and returns a structured, source-grounded answer.
+**Intentional progress saving.** Nothing is recorded automatically — results are saved
+only when the learner selects "Save to learning journey", and saving is idempotent.
 
-What works in this phase:
+**Conservative mastery policy.** Stronger evidence can raise a concept's mastery, while
+a single weaker result sets **Needs Review** instead of downgrading it.
 
-- **Real multi-turn conversation** — grounded answers with the sources actually
-  used shown as chips (click to preview the exact excerpt sent to Gemini).
-- **Local retrieval, remote generation** — the Phase 4 lexical engine still picks
-  the top ≤4 chunks in the browser; only those excerpts (plus the question,
-  recent history, and course config) are sent. **Your full documents are never
-  sent.**
-- **Learning actions** — "Explain simply" and "Give an example" send grounded
-  follow-ups; "Show source" opens a local preview (no extra API call); "Ask a
-  follow-up" focuses the composer.
-- **Honest failure modes** — insufficient-knowledge answers when the material
-  doesn't cover a question; clear, categorised errors (not configured / auth /
-  rate limit / timeout / safety / malformed / provider) with a Retry for
-  retryable ones; **Cancel** an in-flight request.
-- **Privacy transparency** — a persistent notice plus a per-session first-use
-  acknowledgement before the first AI request.
-- **Automated tests** (Vitest, **78 total**) — request validation, prompt
-  construction, response validation, error mapping, conversation utilities, and
-  prompt-injection cases. **No test calls the real API.**
-- Everything from Phases 3–4 (configuration, ingestion, previews, persistence,
-  and the fully-local Grounding Lab) still works.
+**Local, privacy-minimised persistence.** Only concept metadata, source-label
+snapshots, timestamps, and review prompts are stored — never chat history, learner
+explanations, written challenge answers, or full AI feedback.
 
-</details>
-</details>
-</details>
-</details>
+**Choice challenge evaluation without AI.** Multiple-choice and scenario answers are
+marked deterministically on the server; comparing two option IDs needs no model.
 
-### AI configuration
+**Procedural 3D assistant.** The submission uses a lightweight procedurally-modelled
+character with a 2D fallback. A custom GLB model was intentionally deferred so
+visual-asset work would not delay the functional prototype; the architecture supports a
+later drop-in with a GLB → procedural → 2D fallback chain.
 
-- SDK: **`@google/genai` 2.12.0**, server-side only, via `ai.models.generateContent`
-  with a structured `responseSchema`.
-- Model: read from **`GEMINI_MODEL`**; server-side fallback
-  **`gemini-3.1-flash-lite`** — the confirmed default, verified working against the
-  real Gemini API for this project and returning real grounded answers. (During
-  testing, `gemini-3.5-flash` returned HTTP 503 for this project; the model stays
-  configurable via `GEMINI_MODEL`.)
-- The **`GEMINI_API_KEY`** lives only in server env (`.env.local`), never uses a
-  `NEXT_PUBLIC_` prefix, and is absent from the client bundle. The app builds and
-  runs without it; the conversation reports *"AI conversation is not configured"*
-  until one is set.
+**Honest prototype security.** The public endpoints are unauthenticated, there is no
+durable global rate limiter, browser-held challenge state is not secure enough for
+formal exams, localStorage is readable by any same-origin script and is not encrypted,
+and prompt-injection defence is a mitigation rather than a guarantee.
 
-### Privacy boundary (changed in Phase 5, extended in Phases 7–8)
+---
 
-When you take a challenge, the selected concept, your challenge response, your
-course configuration, and up to four supporting source excerpts may be sent to the
-configured Gemini API — again **without** your conversation history. Multiple-choice
-and scenario answers are marked deterministically on the server and are **not** sent
-to Gemini at all.
+## Implementation Process
 
+The prototype was built as a layered workflow rather than a single pass. Work started
+by fixing the product boundaries and the core learning loop, then building the
+responsive workspace and the local course-configuration system. Local ingestion,
+deterministic chunking, and lexical retrieval were implemented and tested in isolation
+before any model was involved, so grounding could be reasoned about independently of
+the AI.
 
-Phases 3–4 were fully local. Now, **when you send a message**, your question,
-recent conversation, and up to four relevant source excerpts are sent to the
-configured Gemini API. **When you teach a concept back**, the concept, your
-explanation, your course configuration, and that answer's source excerpts (≤4) are
-sent — **without** your conversation history. Your full document collection is
-**never** sent, documents stay in this browser, and neither the conversation nor
-your teach-back feedback is persisted by Moti AI. Provider-side handling follows
-the configured Gemini account and terms.
+Grounded conversation was then added through a server Route Handler with structured
+output and runtime validation, followed by teach-back and micro-challenges as
+**separate** workflows with their own contracts. Validated outcomes were connected to
+local progress and review only after those activities were stable, keeping persistence
+pure and idempotent. The interactive avatar and its accessible fallbacks were layered
+on without becoming load-bearing — essential information always lives in the HTML, not
+the canvas. The final stages hardened request handling, added unit, route, and browser
+regression tests, and completed a responsive and accessibility polish pass.
 
-### Grounding & prompt-injection defence
+A few engineering practices were held throughout: **small, focused modules**;
+**pure, deterministic policy functions** with injected time; **strict TypeScript** with
+no implicit `any`; **server-only secrets**; **dependency restraint**; **no real Gemini
+calls in automated tests** (the model boundary is mocked and browser tests intercept
+every API route); a small set of **manual real-provider smoke tests**; and **explicit
+documentation of limitations**.
 
-- Answers to course-specific questions come **only** from the supplied excerpts;
-  Moti says so when the material is insufficient rather than inventing facts.
-- Source text is delimited and escaped as **untrusted data**; hard-coded system
-  rules always precede the user-configurable coaching style; the model may only
-  cite source ids that were supplied, and returned ids are re-validated.
-- Prompt injection cannot be eliminated entirely — this is a prototype defence,
-  not a guarantee.
+---
 
-### Prototype limits & security notes
+## Technologies & Platforms Used
 
-- **Shared HTTP hardening (Phase 11):** every AI route reads its body through one
-  bounded reader — **415** for a wrong/missing content type, **413** for a body over
-  **128 KiB** (measured in streamed UTF-8 bytes and cancelled on overflow), **400**
-  for malformed JSON. All AI responses are `Cache-Control: no-store`, and errors are
-  safe public payloads (never a raw provider message, stack, or key). Baseline
-  security headers (`nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy`,
-  `Permissions-Policy`, `COOP`) are set on every route. **No CSP yet** — a strict
-  production CSP is documented future work.
-- Chat request caps: message **300 chars**, history **6 items**, sources **4**
-  (≤1,500 chars each, ≤6,000 total). Server timeout **45s**.
-- Teach-back caps: concept **150 chars**, explanation **15–1,200 chars**, sources
-  **1–4** (same size caps, and **no** history). Same **45s** timeout.
-- Challenge caps: concept **150 chars**, written answer **5–1,200 chars**, sources
-  **1–4**, **2 attempts** per challenge, exactly **4** options for choice types.
-  Same **45s** timeout.
-- Local progress caps: **500** processed-activity ids (bounded, newest kept), 100
-  concepts and 100 review items per course.
-- The `POST /api/chat`, `POST /api/teach-back`, and both `POST /api/challenge/*`
-  endpoints are public and **unauthenticated**, and there is **no durable global
-  rate limiting** (an in-memory serverless counter would give false assurance, so it
-  is deliberately omitted). Browser-held challenge state is re-validated server-side
-  but is not authoritative. A production deployment would need authentication, a
-  shared-store rate limit, protected assessment state, and secure challenge sessions.
-  None are added in this prototype. Full detail:
-  [`docs/testing-and-security.md`](docs/testing-and-security.md).
+| Technology / Platform | Purpose |
+| --- | --- |
+| Next.js (App Router) | Frontend framework and server Route Handlers. |
+| React | UI rendering and component model. |
+| TypeScript | Static typing across the codebase. |
+| Tailwind CSS | Styling via CSS-based configuration and design tokens. |
+| Google Gemini API (`@google/genai`) | Server-side grounded generation and evaluation. |
+| Three.js + React Three Fiber | The procedural 3D Moti assistant. |
+| pdfjs-dist | Client-side PDF text extraction. |
+| Vitest | Unit and Route Handler tests (Gemini mocked). |
+| Playwright | Focused browser end-to-end tests (AI routes intercepted). |
+| ESLint | Linting via a flat config. |
+| Browser localStorage | Local, versioned persistence of course config and progress. |
+| Vercel | Intended deployment target — the Route Handlers are Vercel-compatible; not currently deployed. |
+| Git & GitHub | Version control and repository hosting. |
 
-### Not connected yet (later phases)
+**Core versions:** Next.js `16.2.10` · React `19.2.4` · Three.js `0.185.1` ·
+React Three Fiber `9.6.1` · `@google/genai` `^2.12.0` · pdfjs-dist `^6.1.200` ·
+Vitest `^4.1.10` · Playwright `^1.61.1` · Tailwind CSS `^4` · TypeScript `^5`.
 
-- **No** cloud sync, accounts, or teacher views — progress lives in one browser.
-- **No** notifications, reminders, or background scheduling; reviews surface when
-  you open the app.
-- **No** formal grading, scores, or learning analytics — mastery is a
-  recommendation, and review is self-reported.
-- Conversation history, teach-back feedback, and challenge results are still **not**
-  persisted (only the minimal saved outcome is), and there is no challenge history.
+The default model is **`gemini-3.1-flash-lite`** (configurable via `GEMINI_MODEL`).
 
-See [`docs/development-plan.md`](docs/development-plan.md) for the full phase plan.
+---
 
-## Getting started
+## Project Structure
 
+```
+src/
+├── app/
+│   └── api/          # Route Handlers: chat, teach-back, challenge/generate, challenge/evaluate
+├── components/       # Workspace, chat, mirror, challenge, learning, settings, assistant, ui
+├── contexts/         # Course configuration and learning-progress providers
+├── hooks/            # Conversation, mirror, challenge, visual-state, reduced-motion hooks
+├── lib/
+│   ├── ai/           # Server-only Gemini client, prompt building, response validation
+│   ├── chat/         # Chat request validation and conversation history
+│   ├── challenge/    # Challenge generation/evaluation contracts and policy
+│   ├── chunking/     # Deterministic document chunking
+│   ├── http/         # Shared bounded JSON reader, safe responses, security headers
+│   ├── mirror/       # Moti Mirror teach-back contract
+│   ├── progress/     # Pure mastery/review policy and versioned storage
+│   └── retrieval/    # Lexical index and scoring
+└── data/             # Sample course and demo data
+
+tests/
+└── e2e/              # Playwright specs (AI routes mocked with fixtures)
+
+docs/                 # Product requirements, research, architecture, testing & security
+```
+
+---
+
+## Setup Instructions
+
+### Prerequisites
+- **Git**
+- **Node.js 20 LTS or newer** (the project targets the Node 20 type definitions, and
+  Next.js 16 requires a current LTS)
+- **npm** (bundled with Node.js)
+- A **Google Gemini API key** for live AI features
+- A modern browser with **WebGL** for the 3D assistant (a 2D fallback renders otherwise)
+
+### Clone
+```bash
+git clone https://github.com/Kausian/Moti-ai.git
+cd Moti-ai
+```
+
+### Install
 ```bash
 npm install
-npm run dev      # http://localhost:3000
 ```
+For a clean, reproducible install (e.g. in CI), use `npm ci`.
 
-Validation used to close each phase:
-
+### Configure environment
+Copy the template and add your key:
 ```bash
-npm test          # Vitest unit + route tests (no real Gemini call)
-npm run lint
-npm run build
-npm run verify    # test + lint + build in one command
+cp .env.example .env.local
+```
+`.env.local`:
+```bash
+GEMINI_API_KEY=your_gemini_api_key
+GEMINI_MODEL=gemini-3.1-flash-lite
+```
+- The key is **server-only** — never prefix it with `NEXT_PUBLIC_`.
+- `.env.local` is ignored by Git; only `.env.example` (placeholders) is committed.
+- The app **builds and runs without a key**; live AI requests require one, and the
+  conversation reports that AI is not configured until it is set.
 
-# End-to-end (Playwright, AI routes mocked). First run downloads Chromium:
-npx playwright install chromium
-npm run test:e2e
+### Run the development server
+```bash
+npm run dev
+```
+Open http://localhost:3000.
+
+### Production build
+```bash
+npm run build
+npm start
 ```
 
-### Environment
+### Testing and verification
+```bash
+npm test          # Vitest unit + Route Handler tests (no real Gemini call)
+npm run lint      # ESLint
+npm run build     # Production build
+npm run verify    # test + lint + build in one command
+npm run test:e2e  # Playwright end-to-end tests (AI routes mocked)
+```
+On a fresh clone, install the Playwright browser once before running E2E:
+```bash
+npx playwright install chromium
+```
 
-Copy `.env.example` to `.env.local` and fill in real values when AI features are
-added (a later phase). Phase 3 needs no environment variables — all document
-processing and persistence happen in the browser. The future AI key is
-**server-only** and must never be committed or exposed to the browser.
+---
+
+## How to Use
+
+1. Open **Settings**.
+2. Configure the course title, objective, and learner level.
+3. Upload or paste **PDF, TXT, or Markdown** source material.
+4. Ask Moti a grounded question about the material.
+5. Review the supporting **sources** attached to the answer.
+6. Choose **Teach it back** or **Challenge me** to practise.
+7. **Save** a validated result to your learning journey.
+8. Return later to practise **Memory Echo** reviews.
+
+---
+
+## Testing & Quality Assurance
+
+Quality is enforced by an automated suite that never contacts the real model:
+
+- **481** Vitest unit and Route Handler tests
+- **9** Playwright end-to-end tests
+- Lint clean; production build succeeds
+
+The Route Handler tests mock the Gemini boundary; the Playwright tests intercept every
+`/api/**` call with deterministic fixtures. Coverage areas include:
+
+- request and structured model-response validation;
+- local chunking and lexical retrieval;
+- prompt boundaries and source-ID verification;
+- challenge evaluation and the two-attempt policy;
+- the mastery and review policy (pure, time-injected);
+- storage corruption and write-failure handling;
+- request-size (413) and content-type (415) handling;
+- keyboard navigation and responsive flows;
+- reduced-motion behaviour and the one-Canvas rule.
+
+This is meaningful regression coverage, not a claim of exhaustive or 100% coverage.
+See [`docs/testing-and-security.md`](docs/testing-and-security.md) and
+[`docs/release-checklist.md`](docs/release-checklist.md).
+
+---
+
+## Privacy, Security & Responsible Use
+
+**What the design protects**
+- Full uploaded documents stay in the browser; only selected excerpts may be sent to
+  Gemini.
+- Learner explanations are sent only for the relevant teach-back evaluation, without
+  conversation history.
+- Learning progress is stored **locally** and is never sent to Gemini or any Route
+  Handler.
+- Learner free-text explanations and written challenge answers are **not** stored in
+  progress.
+- The API key stays **server-only**; API responses are `Cache-Control: no-store`.
+- Request size and content type are validated (415 / 413 / 400); cited source IDs are
+  re-verified; all model output is rendered as plain text.
+
+**Honest limitations**
+- The public prototype endpoints are **unauthenticated**.
+- There is **no durable global rate limiting**.
+- **localStorage is not encrypted** and is readable by any same-origin script.
+- **Prompt-injection defence is a mitigation, not a guarantee.**
+- Moti AI is **not** a secure formal-examination system.
+- Mastery statuses are **learning recommendations**, not certified assessments.
+
+---
+
+## Current Limitations
+
+- Lexical retrieval rather than semantic embeddings.
+- Local-only progress with no cloud synchronisation.
+- No authentication.
+- No teacher or multi-user dashboard.
+- A procedural avatar rather than a custom production character.
+- No voice input, text-to-speech, or lip-sync.
+- No secure exam sessions.
+- No formal educational validation.
+- No concept-relationship visualisation — it was intentionally excluded from the
+  submission scope.
+
+---
+
+## Future Improvements
+
+- A custom, optimised GLB Moti character (dropping into the existing fallback chain).
+- Optional embeddings or hybrid lexical + semantic retrieval.
+- Authenticated cloud synchronisation of progress.
+- Teacher-authoring and analytics tools.
+- Protected challenge sessions for higher-stakes practice.
+- More advanced review scheduling.
+- Optional speech features.
+- Production rate limiting and monitoring.
+- A stricter nonce-based Content-Security-Policy.
+
+---
+
+## Screenshots
+
+_Screenshot assets are not yet included in the repository._ Recommended views to
+capture before submission (replace this note with the images when ready):
+
+- Main learning workspace
+- Grounded answer with sources
+- Moti Mirror teach-back feedback
+- A micro-challenge
+- Mastery Journey and Memory Echo
+- Settings and document ingestion
+- Mobile view
+
+---
+
+## Demo
+
+- **Repository:** https://github.com/Kausian/Moti-ai
+- **Live prototype:** not yet deployed.
+- **Demo video:** not yet available.
+
+---
 
 ## Documentation
 
-- [`CLAUDE.md`](CLAUDE.md) — engineering rules and guardrails
-- [`docs/product-requirements.md`](docs/product-requirements.md)
-- [`docs/research-findings.md`](docs/research-findings.md)
-- [`docs/architecture.md`](docs/architecture.md)
-- [`docs/development-plan.md`](docs/development-plan.md)
-- [`docs/testing-and-security.md`](docs/testing-and-security.md) — Phase 11 hardening, test coverage & honest limits
-- [`docs/release-checklist.md`](docs/release-checklist.md) — repeatable release gate
+- [Product requirements](docs/product-requirements.md)
+- [Research findings](docs/research-findings.md)
+- [Architecture](docs/architecture.md)
+- [Testing & security](docs/testing-and-security.md)
+- [Release checklist](docs/release-checklist.md)
+
+---
+
+## Author
+
+**Kausian Senthan**
+GitHub: [@Kausian](https://github.com/Kausian)
+
+---
 
 ## Challenge context
 
-Built for the **Artin Solutions Stage 1 AI Product Prototype Challenge**
-(estimated ~8 hours of effort). The challenge evaluates research, product
-thinking, architecture, engineering decisions, implementation quality,
-documentation, and working functionality. It uses only free and open-source
-tools; no paid subscriptions or paid APIs.
-
-## Disclaimer
-
-Moti AI is an **independent challenge prototype** created for the Artin Solutions
-Stage 1 challenge. It is **not** an official Artin Solutions product and does not
-copy Artin Solutions' branding, logo, or website. It is inspired only by the
-company's public focus on AI-powered learning.
+Moti AI is an **independent prototype** built for the Artin Solutions Stage 1 AI Product
+Prototype Challenge, using only free and open-source tools. It is **not** an official
+Artin Solutions product and does not use its branding — it is inspired only by the
+company's public focus on AI-powered learning. As a prototype, it is not production-ready.
