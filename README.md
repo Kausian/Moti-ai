@@ -13,9 +13,7 @@ The whole experience is built around one signature loop:
 
 **Think → Explain → Correct → Remember**
 
-> **Live demo:** not yet deployed.
-> **Demo video:** not yet available.
-> **Repository:** https://github.com/Kausian/Moti-ai
+> **Live demo:** https://moti-ai-two.vercel.app/
 
 ---
 
@@ -465,26 +463,9 @@ See [`docs/testing-and-security.md`](docs/testing-and-security.md) and
 
 ---
 
-## Screenshots
-
-_Screenshot assets are not yet included in the repository._ Recommended views to
-capture before submission (replace this note with the images when ready):
-
-- Main learning workspace
-- Grounded answer with sources
-- Moti Mirror teach-back feedback
-- A micro-challenge
-- Mastery Journey and Memory Echo
-- Settings and document ingestion
-- Mobile view
-
----
-
 ## Demo
 
-- **Repository:** https://github.com/Kausian/Moti-ai
-- **Live prototype:** not yet deployed.
-- **Demo video:** not yet available.
+- **Live prototype:** https://moti-ai-two.vercel.app/
 
 ---
 
