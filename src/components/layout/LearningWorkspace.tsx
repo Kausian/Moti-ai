@@ -13,14 +13,8 @@ import { useMotiMirror } from "@/hooks/useMotiMirror";
 import { useMotiChallenge } from "@/hooks/useMotiChallenge";
 import { useMotiVisualState } from "@/hooks/useMotiVisualState";
 import { combineAvatarSignals } from "@/lib/avatar/state-mapping";
-import type { LearnerLevel, LoopStage, MotiLearningLoopStage } from "@/lib/types";
+import type { LoopStage, MotiLearningLoopStage } from "@/lib/types";
 import { LOOP_STAGES, demoCourse } from "@/data/demo-data";
-
-const LEVEL_LABEL: Record<LearnerLevel, string> = {
-  beginner: "Beginner",
-  intermediate: "Intermediate",
-  advanced: "Advanced",
-};
 
 /** The Moti Mirror stage names map onto the displayed learning-loop stages. */
 const LOOP_STAGE_LABEL: Record<MotiLearningLoopStage, LoopStage> = {
@@ -104,8 +98,6 @@ export function LearningWorkspace() {
   return (
     <div className="flex min-h-dvh flex-col overflow-x-hidden lg:h-dvh lg:overflow-hidden">
       <AppHeader
-        courseTitle={configuration.courseTitle}
-        learnerLevelLabel={LEVEL_LABEL[configuration.learnerLevel]}
         descriptor={demoCourse.descriptor}
         apiStatus={conversation.apiStatus}
         settingsOpen={settingsOpen}
